@@ -745,7 +745,7 @@ def split_plan_items(plan: str) -> list[str]:
     text = text_value(plan)
     if not text:
         return []
-    matches = list(re.finditer(r"(?m)(?:^|\n)\s*(\d+)[.、．]\s*", text))
+    matches = list(re.finditer(r"(?m)(?:^|\n)\s*(\d+)[.、．]\s*(?=标题\s*[:：])", text))
     if not matches:
         return [text]
     items = []
