@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>创新课题进展汇报 - 东风汽车金融</title>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #ffffff;
+  --text: #111827;
+  --text-muted: #6b7280;
+  --primary-blue: #2563eb;
+  --primary-purple: #7c3aed;
+  --title-gradient: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+  --accent: #6366f1;
+  --accent-warn: #d97706;
+  --accent-danger: #dc2626; 
+  --accent-success: #16a34a;
+  --dim: #9ca3af;
+  --card-bg: #f5f7ff;
+  --card-border: rgba(37, 99, 235, 0.12);
+  --border: #e5e7eb;
+  --radius: 20px;
+  --shadow-card: 0 8px 30px rgba(37, 99, 235, 0.08);
+  --deck-design-width: 1600px;
+  --deck-design-height: 900px;
+  --stage-scale: 1;
+}
+
+html { font-size: 16px; scroll-behavior: smooth; }
+
+body {
+  background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+  color: var(--text);
+  font-family: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  height: 100dvh;
+  user-select: none;
+}
+
+.stage-viewport {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.deck-stage {
+  position: relative;
+  width: calc(var(--deck-design-width) * var(--stage-scale));
+  height: calc(var(--deck-design-height) * var(--stage-scale));
+  overflow: hidden;
+  border-radius: 12px;
+  box-shadow: 0 25px 80px rgba(15, 23, 42, 0.15);
+}
+
+.deck-scale-inner {
+  width: var(--deck-design-width);
+  height: var(--deck-design-height);
+  transform: scale(var(--stage-scale));
+  transform-origin: top left;
+}
+
+#deck { width: 100%; height: 100%; position: relative; overflow: hidden; z-index: 1; background: #fff; }
+
+.slide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(40px);
+  transition: opacity 0.5s ease, transform 0.5s ease, visibility 0.5s;
+}
+
+.slide.active { opacity: 1; visibility: visible; transform: translateY(0); }
+
+.slide-inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(36px, 4.5cqmin, 52px) clamp(44px, calc(5.5 * 16cqmin / 9), 88px) clamp(44px, 6.5cqmin, 72px);
+}
+
+.slide-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 22px;
+  flex-shrink: 0;
+}
+
+.slide-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.slide-logo img {
+  height: 42px;
+  width: auto;
+  border-radius: 8px;
+}
+
+.slide-main { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+
+.slide-title {
+  font-size: clamp(22px, calc(2.6 * 16cqmin / 9), 38px);
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+  letter-spacing: -0.5px;
+}
+
+.slide-subtitle { font-size: clamp(13px, calc(1.2 * 16cqmin / 9), 16px); color: var(--text-muted); margin-bottom: 20px; }
+
+/* Cover Slide */
+.cover-slide .slide-inner {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 50%, #7c3aed 100%);
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+}
+
+.cover-slide .slide-inner::before {
+  content: '';
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+  top: -200px;
+  right: -100px;
+}
+
+.cover-slide .slide-inner::after {
+  content: '';
+  position: absolute;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.3) 0%, transparent 70%);
+  bottom: -150px;
+  left: -50px;
+}
+
+.cover-content { position: relative; z-index: 1; }
+
+.cover-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(10px);
+  padding: 9px 18px;
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.9);
+  margin-bottom: 28px;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+.cover-title {
+  font-size: clamp(38px, calc(5 * 16cqmin / 9), 66px);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -2px;
+  margin-bottom: 16px;
+  color: #fff;
+}
+
+.cover-title span {
+  background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.cover-meta {
+  display: flex;
+  gap: 28px;
+  justify-content: center;
+  margin-top: 40px;
+}
+
+.cover-meta-item { text-align: center; }
+
+.cover-meta-value {
+  font-size: clamp(32px, calc(3.5 * 16cqmin / 9), 50px);
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
+}
+
+.cover-meta-label { font-size: 13px; color: rgba(255,255,255,0.7); margin-top: 6px; }
+
+/* KPI Cards — 左图右数+大百分比（参考截图样式） */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.kpi-card {
+  background: #eff6ff;
+  border: 2px solid #bfdbfe;
+  border-radius: 18px;
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.kpi-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(37,99,235,.15); }
+.kpi-card.highlight { border-color: #1e40af; background: linear-gradient(135deg, #dbeafe, #eff6ff); box-shadow: 0 0 0 3px rgba(30,64,175,.18); }
+
+.kpi-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.kpi-icon.blue { background: linear-gradient(135deg, #2563eb, #3b82f6); color: #fff; }
+.kpi-icon.purple { background: linear-gradient(135deg, #7c3aed, #a855f7); color: #fff; }
+.kpi-icon.green { background: linear-gradient(135deg, #16a34a, #22c55e); color: #fff; }
+.kpi-icon.orange { background: linear-gradient(135deg, #d97706, #f59e0b); color: #fff; }
+.kpi-icon.red { background: linear-gradient(135deg, #dc2626, #ef4444); color: #fff; }
+
+.kpi-content { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+
+.kpi-value {
+  font-size: clamp(20px, calc(2.2 * 16cqmin / 9), 30px);
+  font-weight: 800;
+  color: #1e3a8a;
+  line-height: 1;
+}
+
+.kpi-label { font-size: clamp(13px, calc(1.15 * 16cqmin / 9), 15px); color: #64748b; font-weight: 600; }
+
+/* 右侧大百分比 */
+.kpi-right { flex-shrink: 0; text-align: right; }
+.kpi-right-pct { font-size: clamp(30px, calc(3.2 * 16cqmin / 9), 46px); font-weight: 800; color: #1d4ed8; line-height: 1; }
+.kpi-right-lbl { font-size: clamp(12px, calc(1.05 * 16cqmin / 9), 14px); color: #7c3aed; font-weight: 700; }
+
+.kpi-trend { font-size: 11px; padding: 3px 9px; border-radius: 100px; font-weight: 600; }
+.kpi-trend.up { background: rgba(22, 163, 74, 0.1); color: var(--accent-success); }
+.kpi-trend.neutral { background: rgba(107, 114, 128, 0.1); color: var(--text-muted); }
+
+/* Progress Bars */
+.progress-section { margin-bottom: 20px; }
+
+.progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+
+.progress-title { font-size: clamp(13px, calc(1.2 * 16cqmin / 9), 17px); font-weight: 600; color: var(--text); }
+
+.progress-stats { font-size: clamp(12px, calc(1 * 16cqmin / 9), 14px); color: var(--text-muted); }
+
+.progress-bar-container { height: 11px; background: #e5e7eb; border-radius: 6px; overflow: hidden; margin-bottom: 8px; }
+
+.progress-bar { height: 100%; border-radius: 6px; transition: width 1s ease; }
+.progress-bar.green { background: linear-gradient(90deg, #16a34a, #22c55e); }
+.progress-bar.orange { background: linear-gradient(90deg, #d97706, #f59e0b); }
+.progress-bar.red { background: linear-gradient(90deg, #dc2626, #ef4444); }
+
+.progress-legend { display: flex; gap: 18px; font-size: clamp(11px, calc(0.95 * 16cqmin / 9), 13px); color: var(--text-muted); }
+
+.progress-legend-item { display: flex; align-items: center; gap: 5px; }
+
+.progress-legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+.progress-legend-dot.green { background: var(--accent-success); }
+.progress-legend-dot.blue { background: var(--primary-blue); }
+.progress-legend-dot.red { background: var(--accent-danger); }
+
+/* Subject Cards */
+.subject-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.subject-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 15px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.subject-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+.subject-name {
+  font-size: clamp(12px, calc(1.1 * 16cqmin / 9), 15px);
+  font-weight: 600;
+  color: var(--text);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.risk-badge { font-size: 10px; padding: 3px 9px; border-radius: 100px; font-weight: 600; flex-shrink: 0; }
+.risk-badge.high { background: rgba(220, 38, 38, 0.1); color: var(--accent-danger); }
+.risk-badge.medium { background: rgba(217, 119, 6, 0.1); color: var(--accent-warn); }
+.risk-badge.low { background: rgba(22, 163, 74, 0.1); color: var(--accent-success); }
+.risk-badge.normal { background: rgba(37, 99, 235, 0.1); color: var(--primary-blue); }
+
+.subject-progress { display: flex; align-items: center; gap: 10px; }
+
+.subject-progress-bar { flex: 1; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; }
+
+.subject-progress-fill { height: 100%; border-radius: 3px; }
+.subject-progress-fill.green { background: var(--accent-success); }
+.subject-progress-fill.orange { background: var(--accent-warn); }
+.subject-progress-fill.red { background: var(--accent-danger); }
+
+.subject-progress-value { font-size: clamp(11px, calc(1 * 16cqmin / 9), 13px); font-weight: 700; color: var(--text); width: 38px; text-align: right; }
+
+.subject-meta { font-size: clamp(10px, calc(0.9 * 16cqmin / 9), 12px); color: var(--dim); display: none; /* 去掉进度条下方小字 */ }
+
+/* Detail Header */
+.detail-header {
+  background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+  border-radius: 20px;
+  padding: 24px 28px;
+  color: #fff;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.detail-header::before {
+  content: '';
+  position: absolute;
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+  top: -140px;
+  right: -40px;
+}
+
+.detail-header-content { position: relative; z-index: 1; }
+
+.detail-title { font-size: clamp(20px, calc(2.2 * 16cqmin / 9), 32px); font-weight: 700; margin-bottom: 10px; }
+
+.detail-meta { display: flex; gap: 22px; font-size: 14px; color: rgba(255,255,255,0.85); flex-wrap: wrap; }
+
+.detail-meta-item { display: flex; align-items: center; gap: 7px; font-size: clamp(14px, calc(1.3 * 16cqmin / 9), 16px); }
+
+/* Back Button */
+.back-btn {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: #fff;
+  padding: 9px 16px;
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  z-index: 2;
+}
+
+.back-btn:hover { background: rgba(255,255,255,0.25); }
+
+/* Module Grid — P3 字体增大 */
+.module-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; flex: 1; }
+
+.module-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  padding: 26px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.module-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-card); border-color: var(--primary-blue); }
+
+.module-icon { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 14px; }
+.module-icon.blue { background: linear-gradient(135deg, #2563eb, #3b82f6); color: #fff; }
+.module-icon.orange { background: linear-gradient(135deg, #d97706, #f59e0b); color: #fff; }
+.module-icon.purple { background: linear-gradient(135deg, #7c3aed, #a855f7); color: #fff; }
+.module-icon.green { background: linear-gradient(135deg, #16a34a, #22c55e); color: #fff; }
+.module-icon.red { background: linear-gradient(135deg, #dc2626, #ef4444); color: #fff; }
+
+.module-title { font-size: clamp(18px, calc(1.8 * 16cqmin / 9), 26px); font-weight: 700; color: var(--text); margin-bottom: 10px; }
+
+.module-desc { font-size: clamp(13px, calc(1.2 * 16cqmin / 9), 16px); color: var(--text-muted); flex: 1; line-height: 1.6; }
+
+.module-arrow { margin-top: 14px; display: flex; align-items: center; gap: 5px; font-size: clamp(13px, calc(1.15 * 16cqmin / 9), 16px); font-weight: 600; color: var(--primary-blue); }
+
+/* Milestone — P4 字体增大+双栏 */
+.milestone-list { display: flex; flex-direction: column; gap: 14px; flex: 1; overflow-y: auto; }
+
+.milestone-item {
+  display: flex;
+  gap: 14px;
+  padding: 20px 16px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 15px;
+}
+
+.milestone-icon { width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+.milestone-icon.done { background: rgba(22, 163, 74, 0.1); color: var(--accent-success); }
+.milestone-icon.early { background: rgba(124, 58, 237, 0.1); color: var(--primary-purple); }
+.milestone-icon.delay { background: rgba(220, 38, 38, 0.1); color: var(--accent-danger); }
+.milestone-icon.progress { background: rgba(37, 99, 235, 0.1); color: var(--primary-blue); }
+
+.milestone-content { flex: 1; min-width: 0; }
+
+.milestone-title { font-size: clamp(14px, calc(1.25 * 16cqmin / 9), 17px); font-weight: 600; color: var(--text); margin-bottom: 4px; }
+
+.milestone-desc { font-size: clamp(12px, calc(1.05 * 16cqmin / 9), 14px); color: var(--text-muted); line-height: 1.6; }
+
+.milestone-date { font-size: clamp(12px, calc(1.05 * 16cqmin / 9), 14px); color: var(--dim); margin-top: 5px; }
+
+.milestone-status { font-size: 12px; padding: 4px 12px; border-radius: 100px; font-weight: 600; height: fit-content; flex-shrink: 0; }
+.milestone-status.done { background: rgba(22, 163, 74, 0.1); color: var(--accent-success); }
+.milestone-status.early { background: rgba(124, 58, 237, 0.1); color: var(--primary-purple); }
+.milestone-status.delay { background: rgba(220, 38, 38, 0.1); color: var(--accent-danger); }
+.milestone-status.progress { background: rgba(37, 99, 235, 0.1); color: var(--primary-blue); }
+
+/* P4 双栏布局 */
+.p4-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.p4-col-header {
+  font-size: clamp(14px, calc(1.2 * 16cqmin / 9), 17px);
+  font-weight: 700;
+  color: var(--primary-blue);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.p4-item {
+  display: flex;
+  gap: 14px;
+  padding: 22px 20px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  margin-bottom: 14px;
+  min-height: 90px;
+}
+.p4-milestone-pair-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.p4-milestone-pair-head,
+.p4-milestone-row-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+  min-width: 0;
+}
+.p4-milestone-pair-head .p4-col-header {
+  margin-bottom: 0;
+}
+.p4-milestone-row-shell {
+  padding: 9px;
+  border-radius: 15px;
+  border: 1px solid rgba(210,224,255,0.95);
+  background: linear-gradient(135deg, rgba(248,250,255,0.94), rgba(239,244,255,0.82));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.9);
+  overflow: hidden;
+}
+.p4-milestone-row-shell .p4-item {
+  align-items: center;
+  height: 100% !important;
+  min-height: 88px;
+  margin-bottom: 0;
+  padding: 18px 20px;
+  border: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.42), rgba(255,255,255,0.18));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+  overflow: hidden;
+}
+.p4-item-icon { width: 40px; height: 40px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.p4-item-icon.done { background: rgba(22,163,74,.1); color: var(--accent-success); }
+.p4-item-icon.early { background: rgba(124,58,237,.1); color: var(--primary-purple); }
+.p4-item-content { flex: 1; min-width: 0; }
+.p4-item-title { font-size: clamp(14px, calc(1.25 * 16cqmin / 9), 17px); font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.p4-item-title,
+.p4-item-desc { overflow-wrap: anywhere; }
+.p4-item-desc { font-size: clamp(13px, calc(1.15 * 16cqmin / 9), 15px); color: var(--text-muted); line-height: 1.65; }
+.p4-item-status { font-size: 12px; padding: 3px 11px; border-radius: 100px; font-weight: 600; height: fit-content; flex-shrink: 0; align-self: flex-start; margin-top: 2px; }
+.p4-item-status.done { background: rgba(22,163,74,.1); color: var(--accent-success); }
+.p4-item-status.early { background: rgba(124,58,237,.1); color: var(--primary-purple); }
+.p4-item-status.progress { background: rgba(37,99,235,.1); color: var(--primary-blue); }
+
+/* Risk Cards — P6 无风险等级标签 */
+.risk-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.risk-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 15px; padding: 22px; display: flex; flex-direction: column; }
+
+.risk-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+
+.risk-icon { width: 40px; height: 40px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.risk-icon.high { background: rgba(220, 38, 38, 0.1); color: var(--accent-danger); }
+.risk-icon.medium { background: rgba(217, 119, 6, 0.1); color: var(--accent-warn); }
+.risk-icon.low { background: rgba(22, 163, 74, 0.1); color: var(--accent-success); }
+
+/* 不显示风险等级标签 */
+.risk-level { display: none; }
+
+.risk-title { font-size: clamp(16px, calc(1.4 * 16cqmin / 9), 20px); font-weight: 700; color: var(--text); margin-bottom: 10px; }
+
+.risk-desc { font-size: clamp(13px, calc(1.15 * 16cqmin / 9), 15px); color: var(--text-muted); line-height: 1.7; margin-bottom: 12px; }
+
+.risk-action {
+  font-size: clamp(13px, calc(1.15 * 16cqmin / 9), 15px);
+  color: var(--primary-blue);
+  font-weight: 500;
+  padding: 12px 16px;
+  background: rgba(37,99,235,.07);
+  border-left: 4px solid var(--primary-blue);
+  border-radius: 0 10px 10px 0;
+  line-height: 1.6;
+}
+
+/* P6 左右横向布局：风险卡片 = 左风险 + 右应对 */
+.risk-row { display: flex; gap: 16px; margin-bottom: 16px; min-height: 0; }
+.risk-left { flex: 1; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 15px; padding: 22px 24px; display: flex; flex-direction: column; }
+.risk-right { flex: 1; background: rgba(37,99,235,.05); border: 1px solid rgba(37,99,235,.2); border-radius: 15px; padding: 22px 24px; display: flex; flex-direction: column; }
+.risk-row-label { font-size: clamp(14px,calc(1.2*16cqmin/9),16px); font-weight: 700; color: var(--primary-blue); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+.risk-row-title { font-size: clamp(15px,calc(1.35*16cqmin/9),19px); font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.risk-row-desc { font-size: clamp(13px,calc(1.1*16cqmin/9),15px); color: var(--text-muted); line-height: 1.7; flex: 1; }
+.risk-row-action { font-size: clamp(13px,calc(1.1*16cqmin/9),15px); color: var(--primary-blue); font-weight: 500; padding: 12px 16px; background: rgba(37,99,235,.07); border-left: 4px solid var(--primary-blue); border-radius: 0 10px 10px 0; line-height: 1.6; margin-top: 10px; }
+
+/* Plan Cards — P5 字体增大 */
+.plan-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.plan-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 15px; padding: 20px; }
+
+.plan-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+
+.plan-icon { width: 40px; height: 40px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 18px; background: linear-gradient(135deg, #2563eb, #3b82f6); color: #fff; }
+
+.plan-title { font-size: clamp(15px, calc(1.3 * 16cqmin / 9), 18px); font-weight: 700; color: var(--text); }
+
+.plan-list { list-style: none; padding: 0; }
+
+.plan-list li { font-size: clamp(13px, calc(1.15 * 16cqmin / 9), 15px); color: var(--text-muted); line-height: 1.7; padding: 6px 0 6px 18px; position: relative; }
+
+.plan-list li::before { content: '✓'; position: absolute; left: 0; color: var(--accent-success); font-weight: 700; }
+
+/* P7 双栏布局 */
+.p7-main { flex: 1; display: flex; gap: 20px; min-height: 0; overflow-y: auto; }
+.p7-col { flex: 1; min-width: 0; }
+.p7-col-title {
+  font-size: clamp(15px, calc(1.3 * 16cqmin / 9), 18px);
+  font-weight: 700;
+  color: var(--primary-blue);
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--card-border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.p7-item {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 13px;
+  margin-bottom: 12px;
+}
+.p7-item-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
+.p7-item-icon.progress { background: rgba(37,99,235,.1); color: var(--primary-blue); }
+.p7-item-icon.done { background: rgba(22,163,74,.1); color: var(--accent-success); }
+.p7-item-content { flex: 1; }
+.p7-item-title { font-size: clamp(14px, calc(1.2 * 16cqmin / 9), 17px); font-weight: 600; color: var(--text); margin-bottom: 5px; }
+.p7-item-desc { font-size: clamp(13px, calc(1.1 * 16cqmin / 9), 15px); color: var(--text-muted); line-height: 1.6; }
+.p7-item-status { font-size: 12px; padding: 3px 11px; border-radius: 100px; font-weight: 600; height: fit-content; flex-shrink: 0; align-self: flex-start; margin-top: 2px; }
+.p7-item-status.progress { background: rgba(37,99,235,.1); color: var(--primary-blue); }
+.p7-item-status.done { background: rgba(22,163,74,.1); color: var(--accent-success); }
+
+/* 可读性小图标徽章 */
+.ri-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: clamp(11px, calc(0.95 * 16cqmin / 9), 13px);
+  color: var(--primary-blue);
+  background: rgba(37,99,235,.07);
+  padding: 3px 9px;
+  border-radius: 100px;
+  font-weight: 600;
+  margin-right: 6px;
+}
+
+/* Controls */
+.controls { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; z-index: 100; }
+
+.controls button { background: rgba(255,255,255,0.9); border: 1px solid var(--border); color: var(--text); font-size: 13px; cursor: pointer; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: all 0.2s; backdrop-filter: blur(10px); }
+.controls button:hover { background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.controls button:disabled { opacity: 0.3; cursor: default; }
+
+.controls .counter { font-size: 12px; font-weight: 600; color: var(--text-muted); min-width: 46px; text-align: center; background: rgba(255,255,255,0.9); padding: 7px 14px; border-radius: 100px; border: 1px solid var(--border); backdrop-filter: blur(10px); }
+
+.progress-bar-top { position: fixed; top: 0; left: 0; height: 4px; background: var(--title-gradient); z-index: 100; transition: width 0.5s ease; }
+
+.dots { position: fixed; right: 18px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 7px; z-index: 100; }
+
+.dot { width: 8px; height: 8px; border-radius: 50%; background: #e5e7eb; cursor: pointer; transition: all 0.3s; }
+.dot.active { background: var(--primary-purple); transform: scale(1.4); }
+.dot:hover { background: #c7d2fe; }
+
+.hint { position: fixed; bottom: 72px; left: 50%; transform: translateX(-50%); font-size: 11px; color: var(--dim); z-index: 90; opacity: 0.8; }
+</style>
+</head>
+<body>
+
+<div class="progress-bar-top" id="progressBar"></div>
+
+<div class="dots" id="dots"></div>
+
+<div class="hint">← → 翻页</div>
+
+<div class="stage-viewport">
+  <div class="deck-stage" id="deckStage">
+    <div class="deck-scale-inner">
+      <div class="deck" id="deck">
+
+
+<section class="slide" data-slide="3">
+<div class="slide-inner" style="padding: 0; gap: 0; position: relative;">
+    <div class="detail-header" style="border-radius: 0; margin-bottom: 0;">
+      <div class="detail-header-content">
+        <h1 class="detail-title">创新委指示跟踪</h1>
+        <div class="detail-meta">
+          <div class="detail-meta-item"><span>📅</span><span>统计周期：2026年5月</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-main" style="padding: 20px;">
+      <div class="track-table-container" style="max-height: calc(var(--deck-design-height) - 180px); overflow-y: auto; background: #fff; border-radius: 15px; padding: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+        <table class="track-table" style="width: 100%; border-collapse: collapse; font-size: 16px; color: #000;">
+          <thead>
+            <tr style="background: #2563eb; color: #fff;">
+              <th style="width: 18%; border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5; font-weight: 700; position: sticky; top: 0; z-index: 10; background: #2563eb;">相关课题/部门</th>
+              <th style="width: 37%; border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5; font-weight: 700; position: sticky; top: 0; z-index: 10; background: #2563eb;">跟踪事项</th>
+              <th style="width: 10%; border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5; font-weight: 700; position: sticky; top: 0; z-index: 10; background: #2563eb;">事项类型</th>
+              <th style="width: 10%; border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5; font-weight: 700; position: sticky; top: 0; z-index: 10; background: #2563eb;">提出人</th>
+              <th style="width: 25%; border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5; font-weight: 700; position: sticky; top: 0; z-index: 10; background: #2563eb;">落实情况</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td rowspan="2" style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">01. 构建行业领先的 “新一代” 汽车金融系统</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">尽快锁定本次变更需求，稳定版本，完成合同签署；及时分析各课题与新一代的关联性影响，做好变更管理，保障当前阶段能够按时交付。</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">指摘</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">李化</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5; background-color: #dcfce7;">1、本阶段机构客户需求涉及已于5月15日完成需求定版。<br>2、新一代核心的里程碑任务于其他各课题关系已完成分析和梳理。1、本阶段机构客户需求涉及已于5月15日完成需求定版。<br>2、新一代核心的里程碑任务于其他各课题关系已完成分析和梳理。</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">监管报送相关需求设计需提前与会计团队充分沟通。</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">建议</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">文虎</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5; background-color: #dcfce7;">监管报送需求已与风险管理部数据运营团队和会计团进行沟通，本阶段暂不涉及财务监管报送的调整，仅需在UAT阶段完成报送数据的验证回归测试。监管报送需求已与风险管理部数据运营团队和会计团进行沟通，本阶段暂不涉及财务监管报送的调整，仅需在UAT阶段完成报送数据的验证回归测试。</td>
+            </tr>
+            <tr>
+              <td rowspan="3" style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">02. 贷后资产管理体系和统一贷后业务系统的建设</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">已上线的车辆管理系统要尽快应用于业务管理中，加速推进数据对接。</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">建议</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">何修华</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5; background-color: #dcfce7;">与研发总院、奕派推进数据授权。与研发总院、奕派推进数据授权。</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">针对已上线的车辆管理系统，需持续关注并收集实际业务场景中的优化需求。</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">建议</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">曹远胜</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5; background-color: #dcfce7;">持续收集业务中的建议与需求，相关改进计划保持沟通，部分改进已经上线。持续收集业务中的建议与需求，相关改进计划保持沟通，部分改进已经上线。</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">建议将联合整改相关要求纳入本课题的后续系统开发计划中。</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">建议</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">费俊卿</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5; background-color: #dcfce7;">联合整改与系统开发相关内容作为需求输入，将在实施中落实联合整改与系统开发相关内容作为需求输入，将在实施中落实</td>
+            </tr>
+            <tr>
+              <td rowspan="2" style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">03. 统一客服平台及直营数字化</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">抓紧推进POC测试，尽快就其是否具有不可替代性向何总汇报，并升级汇报相关决策。</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">指摘</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">李化</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5; background-color: #dcfce7;">已完成POC测试，基于评价维度完成对供应商的评价，评价结果已向何总汇报</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">针对智能客服招采计划延期风险，建议采取灵活策略，评估是否可仅单独采购其语音模块，并配合其他供应商的产品组合使用，以在实现技术需求的同时，规避风险、保障项目进度。</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">建议</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">曹希</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5; background-color: #dcfce7;">已完成，首次招采于22号结束，因无候选供应商，二次招采将于17号招标</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">04. 完善落地 “四位一体” 机制，打造金融服务护城河，提升产融协同及金融促销的延续性和黏性</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">课题组应以解决问题为目标，建立汽金与主机厂高层的多元灵活沟通机制。</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">指摘</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">李化</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5; background-color: #dcfce7;">落实集团关于东风汽金批发全覆盖方面<br>1、组织高层的季度会议，对品牌批发推进情况、渠道网络发展规划、新车型上市专项支持进行了沟通确认，乘/商营销部结合品牌需求、调查能力、系统及流程优化方向、人员支持等进行了梳理，并向公司领导汇报，并批发推进信息同步集团和品牌<br>2、公司高层参加品牌新车型上市会（岚图泰山X8、猛士新款817、6月奕派M8等）针对新车上市前线上线下宣传、增加曝光、保客营销、定制化金融产品（捉虫车、试驾车、定制贷等）、促销金融产品（2-3年免息、5年低首付长周期低息产品）等<br>3、东汽金-品牌高层的季度会议；新车型上市专项沟通会、集团金融1V1会议、集团运营分析会等</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">05. 二手车业务模式破局与规模化启动</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">课题组后续应加速推进展业，通过规模化验证模式，为进一步扩大业务规模打好基础。</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">指摘</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">李化</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5; background-color: #dcfce7;">1. 整体推进情况：<br>已同岚图主机厂就当前业务情况完成沟通，具体情况如下。<br>（1）【批发】岚图批发每月预计下线数量为 300 台，暂时未达到此前会议提及的单月 1000 台。<br>（2）【批发】岚图二手车部考核以开票为标准，根据当前汽金三方协议约定，需还清批发款项并完成赎证后，品牌方可开票，该规则与新车存在差异，新车采用合格证质押模式，因此品牌以全款购车为主要批售方式。<br>（3）【零售】直营板块：目前全国共有 5 个城市展厅（武汉、成都、天津、深圳、杭州），单月销量为 70 台至 100 台，金融渗透率约 10%。本月计划为直营门店申请到店礼品，提升品牌合作粘性，后期分阶段性开展积分奖励，提升销售开口率。<br>（4）【零售】生态板块：目前业务以转批发为主。本月将组织区域培训，加强零售业务推广。<br>（5）待流程堵点优化完成后，计划同AITO进行模式复制，完成模式验证。</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">06. 进一步探索海外金融业务</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">课题组加快推进课题，确保2026年完成超10家海外合作金融机构签约，白标合作银行覆盖率达25%。</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">建议</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">刘应田</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5; background-color: #dcfce7;">1.合作签约银行数方面：全年累计目标数为13家，目前已实现12家；正在推进巴西子公司潜在合作银行的对接工作，已收到2家银行的初步合作建议；<br>2.目前正在推进越南子公司的星展应收账款保理业务，计划6月份落地，达成25%的业务覆盖率；.白标合作银行覆盖率方面：意大利业务已在1季度落地并逐步走向正轨。</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">07. 构建数智化风控体系</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">建议课题组加速推进项目，尽量错峰避开6月30日各系统集中上线高峰期，以降低资源冲突与整体风险。</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">指摘</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">李化</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5; background-color: #dcfce7;">1.5月份已提前启动零售个人机器学习模型咨询，瓦城专家访谈及数据清洗和业务基本面分析<br>2.智能风控平台3个功能模块均将上线试运行计划提前至6月中旬，避开630上线高峰。</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">08. 构建数字化运营能力体系</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">建议针对毛利、净利等关键经营指标的展示，采取能快速实现的方案，以优先满足业务部门的迫切需求。</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">建议</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">黎嵘</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5; background-color: #dcfce7;">1.整体思路：以经营管理使用需求为主，在宽表基础上建设经营管理聚合表格。<br>2.工作机制：单独针对毛利、净利核算建立每周进展同步的周会机制；<br>3.目前进展：初步完成宽表字段梳理和解读，并要求IT以6.30日完成全部三级表单建设为目标，倒排里程碑。1.整体思路：以经营管理使用需求为主，在宽表基础上建设经营管理聚合表格。<br>2.工作机制：单独针对毛利、净利核算建立每周进展同步的周会机制；<br>3.目前进展：初步完成宽表字段梳理和解读，并要求IT以6.30日完成全部三级表单建设为目标，倒排里程碑。</td>
+            </tr>
+            <tr>
+              <td rowspan="2" style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">09. 打造数字化营销矩阵</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">指出课题关键在建设我司独立的获客能力，通过新媒体营销、无感金融等方式赋能主机厂销售；鼓励积极发动公司内部力量，强化直播引流与转化能力。</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">指摘</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">李化</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5; background-color: #dcfce7;">1. 与乘用车营销服务部品牌团队共同推动奕境保客营销预售金融权益联合营销；<br>2. 与消保中心共创“消保合规宣传”栏目内容，并参与北京金融监管局办公室开展的《2026年防范非法金融活动短视频征集大赛》；<br>3.计划将于6月上线“揭秘汽金”栏目，以通俗易懂方式向用户展示业务流程和运行机制，提升品牌形象，首期将与信贷审批部联合共创。<br>4.通过微信公众号发布推文（同步上线公众号菜单、小程序），开展“岚图泰山X8上市”、“岚图梦想家、泰山、追光忠客专项金融产品”、“雪铁龙品牌周年庆”联合营销活动，其中岚图忠客产品营销共收集线索368条，筛选高意向客户2、中意向客户3，已下发至区域至经销商进行后续跟进。</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">肯定课题组采取的新媒体独立运营方式，后续逐步对接集团建设统一营销平台，支持更灵活的联合营销与线索转化模式。</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">建议</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">曹希</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5; background-color: #dcfce7;">1. 已参与集团线索管理平台搭建项目，梳理前置金融数字化营销流程，后续汽金作为集团增量线索来源奠定基础<br>2. 已完成联合营销活动公众号粉丝引流机制建立。</td>
+            </tr>
+            <tr>
+              <td rowspan="3" style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">10. AI 数字化员工</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">可组织提升公司全体员工使用AI的意识并进行使用培训与宣导。</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">指摘</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">李化</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5; background-color: #dcfce7;">计划6月开展一次全员 AI 培训。</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">课题组可主动与乘、商用车营销服务部、信贷审批部等部门沟通，协同帮助业务梳理AI需求；</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">指摘</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">李化</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5; background-color: #dcfce7;">1、推广ITBP机制，已与信贷审批部建立部门级交流机制，跟踪需求开发、课题建设等。<br>2、计划与乘/商营销服务部建立部门级交流机制，主动了解一线技术手段支撑、需求开发诉求等。</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">课题组应加快推进速度，与业务部门共创数字人，同时希望业务部门积极参与设计AI应用需求工作。</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">建议</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">陈明垓</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5; background-color: #dcfce7;">1. 后续开展需求收集工作时，将指导业务部门使用工具和模型，引导客户参与共创。<br><br>2. 完成内部 API 的权限管理与调用量管控功能开发后，将在可控范围内开放内部大模型 API 供用户试用</td>
+            </tr>
+            <tr>
+              <td rowspan="3" style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">信息科技部</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">信息科技部主动组织与乘、商用车营销服务部、信贷审批部等部门沟通，协同帮助业务梳理AI需求；</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">指摘</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">李化</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5; background-color: #dcfce7;">1、推广ITBP机制，已与信贷审批部建立部门级交流机制，跟踪需求开发、课题建设等。<br>2、计划与乘/商营销服务部建立部门级交流机制，主动了解一线技术手段支撑、需求开发诉求等。</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">鉴于当前系统开发资源紧张，信息科技部需与各业务部门对齐，明确近期需求清单与计划。</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">指摘</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">李化</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5; background-color: #dcfce7;">1、需求开发计划及进展每周以周报形式同步业务部门，并抄送李化总；<br>2、推广ITBP机制，已与信贷运营部建立部门级交流机制，跟踪需求开发、课题建设等。</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">“新一代”课题存在供应商人员流动的风险，请信息科技部关注核心供应商人员流失问题。</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">建议</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">曹希</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5; background-color: #dcfce7;">5月28日双方高层领导会晤交流，形成待办并协同推进，6月10日回顾待办推进进展。</td>
+            </tr>
+            <tr>
+              <td rowspan="2" style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">综合管理部（党群工作部）</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">要求综合管理部关注并落实集团对各成员单位无条件支持海外事业的要求，特别的，需将外语能力纳入考核维度，为汽金及集团储备出海人才。</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">指摘</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">李化</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5; background-color: #dcfce7;">招录应届生时将外语能力列为重点关注项，结合分层分类储备机制，择优筛选海外业务储备人才</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">海外金融课题组目前人员紧张问题凸显，请综合管理部协调补充具备专业素质与相应外语能力的人员。</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">建议</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">曹希</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5; background-color: #dcfce7;">调配2名兼具专业素养与一定外语能力人员支援海外金融课题组，协同开展海外金融相关业务</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">资产管理部</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5;">邀请信息科技部与课题组一同关注、了解微众银行的智能外呼应用情况。</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">建议</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: center; vertical-align: middle; line-height: 1.5;">费俊卿</td>
+              <td style="border: 1px solid #000; padding: 14px 12px; text-align: left; vertical-align: middle; line-height: 1.5; background-color: #dcfce7;">后续由费总牵头安排</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="slide" data-slide="9">
+    <div class="slide-inner">
+        <div class="detail-header">
+            <div class="detail-header-content">
+                <h1 class="detail-title">课题6：进一步探索海外金融业务</h1>
+                <div class="detail-meta">
+                    <div class="detail-meta-item"><span>👤</span><span>课题牵头人：李化</span></div>
+                    <div class="detail-meta-item"><span>📋</span><span>Owner：曹希 📊 PM：王珏</span></div>
+                    <div class="detail-meta-item"><span>⚠️</span><span>风险等级：正常推进</span></div>
+                    <div class="detail-meta-item"><span>📊</span><span>里程碑完成率：100%</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="slide-main" style="overflow-y: auto; padding-bottom: 20px;">
+            <!-- ==== 本月里程碑 ==== -->
+            <div style="margin-bottom: 30px;">
+                <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 16px; color: #111827;">本月里程碑完成情况</h2>
+                <div class="kpi-grid" style="margin-bottom: 16px; grid-template-columns: repeat(3,1fr); display: grid; gap: 20px;">
+                    <div class="kpi-card" style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 15px; padding: 20px; display: flex; align-items: center; gap: 16px;">
+                        <div class="kpi-icon green" style="width: 48px; height: 48px; border-radius: 12px; background: #E8FFEA; color: var(--accent-success); display: flex; align-items: center; justify-content: center; font-size: 24px;">✅</div>
+                        <div class="kpi-content">
+                            <div class="kpi-value" style="font-size: 24px; font-weight: 700; color: var(--text);">1</div>
+                            <div class="kpi-label" style="font-size: 14px; color: var(--text-muted);">已完成里程碑</div>
+                        </div>
+                    </div>
+                    <div class="kpi-card" style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 15px; padding: 20px; display: flex; align-items: center; gap: 16px;">
+                        <div class="kpi-icon purple" style="width: 48px; height: 48px; border-radius: 12px; background: #F9F0FF; color: var(--primary-purple); display: flex; align-items: center; justify-content: center; font-size: 24px;">🎉</div>
+                        <div class="kpi-content">
+                            <div class="kpi-value" style="font-size: 24px; font-weight: 700; color: var(--text);">1</div>
+                            <div class="kpi-label" style="font-size: 14px; color: var(--text-muted);">提前完成</div>
+                        </div>
+                    </div>
+                    <div class="kpi-card" style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 15px; padding: 20px; display: flex; align-items: center; gap: 16px;">
+                        <div class="kpi-icon blue" style="width: 48px; height: 48px; border-radius: 12px; background: #E8F3FF; color: var(--primary-blue); display: flex; align-items: center; justify-content: center; font-size: 24px;">📋</div>
+                        <div class="kpi-content">
+                            <div class="kpi-value" style="font-size: 24px; font-weight: 700; color: var(--text);">100%</div>
+                            <div class="kpi-label" style="font-size: 14px; color: var(--text-muted);">里程碑完成率</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p4-milestone-pair-list">
+                    <div class="p4-milestone-pair-head">
+                        <div class="p4-col-header">📌 本月里程碑</div>
+                        <div class="p4-col-header"></div>
+                    </div>
+                    <div class="p4-milestone-row-shell">
+                        <div class="p4-item" style="height: 100%;">
+                            <div class="p4-item-icon early">🎉</div>
+                            <div class="p4-item-content">
+                                <div class="p4-item-title">6.2 ① 梳理海外各大区属地潜在银行清单② 根据进出口公司的海外子公司规划，制定海外金融机构沟通路线图③根据沟通路线图，完成重点区域金融机构的拜访</div>
+                                <div class="p4-item-desc">6.2.4 完成拜访报告</div>
+                            </div>
+                            <span class="p4-item-status early">🎉 提前完成</span>
+                        </div>
+                        <div class="p4-item" style="cursor: pointer; height: 100%;" onclick="window.open(&quot;https://ycn4om52fcze.feishu.cn/file/PTSzbTo9eoITlMxyoWqcwm9gnMh&quot;, '_blank')">
+                            <div class="p4-item-icon early">🎉</div>
+                            <div class="p4-item-content">
+                                <div class="p4-item-title">已完成拜访报告并与进出口公司同事共同完成汇报</div>
+                                <div class="p4-item-desc">交付物：《巴西市场调研报告V6-终版》</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- ==== 下月行动计划 ==== -->
+            <div style="margin-bottom: 30px;">
+                <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 16px; color: #111827;">下月行动计划</h2>
+                <div class="plan-grid">
+                    <div class="plan-card">
+                        <div class="plan-header">
+                            <div class="plan-icon">📋</div>
+                            <div class="plan-title">1. 业务落地</div>
+                        </div>
+                        <ul class="plan-list">
+                            <li>实现第二个子公司已签约金融机构的业务落地</li>
+                        </ul>
+                    </div>
+                    <div class="plan-card">
+                        <div class="plan-header">
+                            <div class="plan-icon">📋</div>
+                            <div class="plan-title">2. 合作银行覆盖率</div>
+                        </div>
+                        <ul class="plan-list">
+                            <li>达成合作银行覆盖率 25%</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==== 风险与PMO总结 ==== -->
+            <div>
+                <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 16px; color: #111827;">课题风险与PMO总结</h2>
+                <div style="display: flex; flex-direction: column; justify-content: space-between;">
+                    <div style="overflow-y: auto;">
+                        <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 15px; padding: 20px; text-align: center; color: var(--text-muted);">暂无本月风险项</div>
+                    </div>
+                    <div style="flex-shrink: 0; margin-top: 20px; display: grid; grid-template-columns: 10% 90%; gap: 10px; align-items: start; background: #dcfce7; border: 1px solid #86efac; border-radius: 15px; padding: 20px;">
+                        <div style="font-weight: 700; color: #15803d; text-align: right; line-height: 1.5;">PMO总结：</div>
+                        <div style="color: #166534; line-height: 1.5;">正常推进</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <div class="controls">
+      <button onclick="prevSlide()" id="prevBtn">←</button>
+      <div class="counter"><span id="currentSlide">1</span> / <span id="totalSlides">2</span></div>
+      <button onclick="nextSlide()" id="nextBtn">→</button>
+    </div>
+  </div>
+</div>
+
+
+
+<script>
+let currentSlide = 1;
+const slides = document.querySelectorAll('.slide');
+const totalSlides = slides.length;
+const progressBar = document.getElementById('progressBar');
+const hint = document.querySelector('.hint');
+const dotsContainer = document.getElementById('dots');
+
+for (let i = 1; i <= totalSlides; i++) {
+  const dot = document.createElement('div');
+  dot.className = 'dot' + (i === 1 ? ' active' : '');
+  dot.onclick = () => goToSlide(i);
+  dotsContainer.appendChild(dot);
+}
+
+function updateSlide() {
+  slides.forEach((slide, index) => {
+    slide.classList.remove('active');
+    if (index + 1 === currentSlide) slide.classList.add('active');
+  });
+  document.querySelectorAll('.dot').forEach((dot, index) => {
+    dot.classList.toggle('active', index + 1 === currentSlide);
+  });
+  if (progressBar) progressBar.style.width = ((currentSlide / totalSlides) * 100) + '%';
+  document.getElementById('currentSlide').textContent = currentSlide;
+  document.getElementById('totalSlides').textContent = totalSlides;
+  document.getElementById('prevBtn').disabled = currentSlide === 1;
+  document.getElementById('nextBtn').disabled = currentSlide === totalSlides;
+}
+
+function nextSlide() { if (currentSlide < totalSlides) { currentSlide++; updateSlide(); } }
+function prevSlide() { if (currentSlide > 1) { currentSlide--; updateSlide(); } }
+function goToSlide(n) { currentSlide = n; updateSlide(); }
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'ArrowDown') { e.preventDefault(); nextSlide(); }
+  else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); prevSlide(); }
+  else if (e.key === 'Home') goToSlide(1);
+  else if (e.key === 'End') goToSlide(totalSlides);
+  else if (e.key === 'f' || e.key === 'F') {
+    if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(()=>{}); }
+    else { document.exitFullscreen().catch(()=>{}); }
+  }
+});
+
+function updateScale() {
+  const stage = document.getElementById('deckStage');
+  const scaleX = window.innerWidth / 1600;
+  const scaleY = window.innerHeight / 900;
+  const scale = Math.min(scaleX, scaleY, 1);
+  stage.style.setProperty('--stage-scale', scale);
+}
+
+window.addEventListener('resize', updateScale);
+updateScale();
+updateSlide();
+setTimeout(() => { if (hint) hint.style.opacity = '0'; }, 3000);
+</script>
+
+</body>
+</html>
