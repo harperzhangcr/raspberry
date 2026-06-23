@@ -1,0 +1,1627 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>模拟客户状态触发规则展示</title>
+  <style>
+    :root { --bg:#f6f7f9; --panel:#fff; --text:#1f2933; --muted:#657382; --line:#d9e1e8; --blue:#1f5f99; --blue-soft:#e6f0f8; --red:#b42318; --red-soft:#ffe4e1; --green-soft:#eaf5ed; --amber-soft:#fff2cc; --shadow:0 8px 24px rgba(31,41,51,.08); }
+    * { box-sizing:border-box; } body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif; color:var(--text); background:var(--bg); }
+    .app { width:min(1500px,calc(100vw - 40px)); margin:24px auto 40px; } .topbar { display:flex; align-items:flex-end; justify-content:space-between; gap:20px; margin-bottom:16px; }
+    h1 { margin:0 0 6px; font-size:24px; line-height:1.25; font-weight:700; } .meta { color:var(--muted); font-size:13px; } .stats { display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
+    .stat { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:8px 12px; min-width:96px; text-align:right; } .stat strong { display:block; font-size:20px; line-height:1; } .stat span { color:var(--muted); font-size:12px; }
+    .tabs { position:sticky; top:0; z-index:5; display:flex; gap:8px; padding:10px 0; background:var(--bg); border-bottom:1px solid var(--line); overflow-x:auto; } .tab { border:1px solid var(--line); background:var(--panel); color:var(--text); height:38px; padding:0 14px; border-radius:8px; cursor:pointer; font-weight:600; white-space:nowrap; } .tab span { margin-left:8px; color:var(--muted); font-weight:500; } .tab.active { color:#fff; background:var(--blue); border-color:var(--blue); } .tab.active span { color:#dceaf5; }
+    .tab-panel { display:none; padding-top:14px; } .tab-panel.active { display:grid; gap:12px; } .customer-card { width:100%; background:var(--panel); border:1px solid var(--line); border-radius:8px; box-shadow:var(--shadow); overflow:hidden; }
+    .customer-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; padding:14px; border-bottom:1px solid var(--line); background:#fbfcfd; } .tags { display:flex; flex-wrap:wrap; gap:6px; min-width:0; }
+    .badge { display:inline-flex; align-items:center; min-height:26px; padding:4px 9px; border-radius:999px; border:1px solid var(--line); background:#fff; font-size:12px; line-height:1.25; color:var(--text); max-width:100%; } .badge.id { font-weight:700; color:var(--blue); background:var(--blue-soft); border-color:#bfd7ea; } .badge.regular { background:var(--green-soft); } .badge.abnormal { color:var(--red); background:var(--red-soft); border-color:#f5b7b1; font-weight:600; } .badge.risk { background:var(--amber-soft); } .badge.state { background:#eef2f6; }
+    .conflict { flex:0 0 auto; max-width:360px; color:var(--muted); font-size:12px; line-height:1.45; text-align:right; } .conflict.warn { color:#8a4b00; font-weight:600; }
+    .actions { display:grid; gap:0; } .action { display:grid; grid-template-columns:minmax(360px,1.5fr) minmax(180px,.6fr) minmax(220px,.8fr); gap:14px; align-items:center; padding:11px 14px; border-bottom:1px solid #edf1f4; font-size:13px; } .action:last-child { border-bottom:0; } .action.abnormal { background:var(--red-soft); color:var(--red); font-weight:600; }
+    .action-main { display:flex; align-items:baseline; gap:8px; min-width:0; } .type { flex:0 0 auto; min-width:48px; font-size:12px; color:var(--muted); } .action.abnormal .type { color:var(--red); } .action-name,.role,.source { overflow-wrap:anywhere; } .source { color:var(--muted); font-size:12px; } .empty { padding:18px 14px; color:var(--muted); }
+    @media (max-width:900px) { .app { width:min(100vw - 24px,1500px); margin-top:14px; } .topbar,.customer-head { display:block; } .stats { justify-content:flex-start; margin-top:12px; } .conflict { max-width:none; text-align:left; margin-top:8px; } .action { grid-template-columns:1fr; gap:4px; } }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="topbar"><div><h1>模拟客户状态触发规则展示</h1><div class="meta">基于当前最新规则卡生成；异常处置动作优先展示并标红，每个条线保留 5 个双卡命中案例。</div></div><div class="stats"><div class="stat"><strong>53</strong><span>客户样本</span></div><div class="stat"><strong>205</strong><span>触发动作</span></div><div class="stat"><strong>101</strong><span>异常动作</span></div><div class="stat"><strong>32</strong><span>双卡命中</span></div></div></section>
+    <nav class="tabs" aria-label="条线切换"><button class="tab active" data-tab="tab-0" type="button">乘用车<span>17</span></button><button class="tab" data-tab="tab-1" type="button">中重卡-担保<span>9</span></button><button class="tab" data-tab="tab-2" type="button">中重卡-非担保<span>9</span></button><button class="tab" data-tab="tab-3" type="button">轻卡-燃油<span>9</span></button><button class="tab" data-tab="tab-4" type="button">轻卡-新能源<span>9</span></button></nav>
+    <section id="tab-0" class="tab-panel active">
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">PV-R-01</span><span class="badge regular">常规</span><span class="badge risk">低风险</span><span class="badge state">客户阶段：新增</span><span class="badge tag">AI外呼未接通</span><span class="badge tag">放款日次日</span></div>
+        <div class="conflict ">未发现硬冲突</div>
+      </header>
+      <section class="actions">
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">协调经销商督促客户保存回访号码（ACT013）</span></div>
+        <div class="role">区域（ROLE001）</div>
+        <div class="source">乘用车-常规贷后动作 第4行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">AI外呼（ACT001）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-常规贷后动作 第5行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">AI外呼（ACT001）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-常规贷后动作 第6行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">PV-R-02</span><span class="badge regular">常规</span><span class="badge risk">中风险</span><span class="badge state">客户阶段：新增</span><span class="badge tag">AI外呼已接通</span><span class="badge tag">客户经理反馈</span></div>
+        <div class="conflict ">未发现硬冲突</div>
+      </header>
+      <section class="actions">
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">协调经销商督促客户保存回访号码（ACT013）</span></div>
+        <div class="role">区域（ROLE001）</div>
+        <div class="source">乘用车-常规贷后动作 第25行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工外呼（回访）（ACT012）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-常规贷后动作 第28行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工外呼（回访）（ACT012）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-常规贷后动作 第30行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">PV-R-03</span><span class="badge regular">常规</span><span class="badge risk">低风险</span><span class="badge state">客户阶段：存量</span><span class="badge tag">当前是否逾期=否</span><span class="badge tag">第一轮AI外呼未接</span><span class="badge tag">近三期有逾期记录</span><span class="badge tag">还款日前2天</span></div>
+        <div class="conflict ">未发现硬冲突</div>
+      </header>
+      <section class="actions">
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">AI外呼（ACT001）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-常规贷后动作 第11行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">PV-R-04</span><span class="badge regular">常规</span><span class="badge risk">中风险</span><span class="badge state">客户阶段：存量</span><span class="badge tag">扣款失败</span><span class="badge tag">还款日当天</span></div>
+        <div class="conflict ">未发现硬冲突</div>
+      </header>
+      <section class="actions">
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工外呼（回访）（ACT012）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-常规贷后动作 第35行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">PV-R-05</span><span class="badge regular">常规</span><span class="badge risk">高风险</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：10</span><span class="badge tag">无有效期内还款承诺</span></div>
+        <div class="conflict ">未发现硬冲突</div>
+      </header>
+      <section class="actions">
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工发催收施压+律师函提醒短信（ACT003）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-常规贷后动作 第64行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工发锁车短信（ACT010）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-常规贷后动作 第65行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">锁车（ACT038）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-常规贷后动作 第68行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">发送律师函（ACT015）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-常规贷后动作 第69行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">PV-R-06</span><span class="badge regular">常规</span><span class="badge risk">中风险</span><span class="badge state">客户阶段：存量</span><span class="badge tag">已锁车</span><span class="badge tag">逾期结清</span></div>
+        <div class="conflict ">未发现硬冲突</div>
+      </header>
+      <section class="actions">
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">解锁（ACT033）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-常规贷后动作 第45行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">PV-R-07</span><span class="badge regular">常规</span><span class="badge risk">高风险</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：31</span><span class="badge tag">存在经销商阶段性担保</span><span class="badge tag">进入委外阶段</span></div>
+        <div class="conflict ">未发现硬冲突</div>
+      </header>
+      <section class="actions">
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">提交委外电催申请（ACT020）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-常规贷后动作 第71行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">委外派单及工作跟踪（ACT018）</span></div>
+        <div class="role">委外催收管理（ROLE002）</div>
+        <div class="source">乘用车-常规贷后动作 第72行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">客户梳理并制定下一步催收动作（ACT019）</span></div>
+        <div class="role">委外催收管理（ROLE002）</div>
+        <div class="source">乘用车-常规贷后动作 第73行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">督促履行经销商担保责任（ACT029）</span></div>
+        <div class="role">区域（ROLE001）</div>
+        <div class="source">乘用车-常规贷后动作 第74行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">收车（ACT021）</span></div>
+        <div class="role">资管（ROLE005）</div>
+        <div class="source">乘用车-常规贷后动作 第76行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">PV-R-08</span><span class="badge regular">常规</span><span class="badge risk">低风险</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：1</span></div>
+        <div class="conflict ">未发现硬冲突</div>
+      </header>
+      <section class="actions">
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工发客户卡号短信（ACT005）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-常规贷后动作 第15行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">AI外呼（ACT001）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-常规贷后动作 第20行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">PV-A-01</span><span class="badge abnormal">异常</span><span class="badge risk">低风险</span><span class="badge state">客户阶段：新增</span><span class="badge abnormal">异常类型：疑似失联</span></div>
+        <div class="conflict warn">双卡命中：异常动作优先，常规动作可作为次级/抑制</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">人工外呼（异常处置）（ACT100）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-异常处置动作 第4行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">核实情况（ACT133）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-异常处置动作 第5行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（反馈异常客户与异常台帐）（ACT106）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-异常处置动作 第6行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">协调经销商督促客户保存回访号码（ACT013）</span></div>
+        <div class="role">区域（ROLE001）</div>
+        <div class="source">乘用车-常规贷后动作 第4行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">PV-A-02</span><span class="badge abnormal">异常</span><span class="badge risk">中风险</span><span class="badge state">客户阶段：存量</span><span class="badge abnormal">异常类型：客户暂时还款困难希望变更还款计划</span><span class="badge tag">内催阶段</span></div>
+        <div class="conflict ">未发现硬冲突</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">内催阶段贷后业务办理（ACT138）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-异常处置动作 第17行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">PV-A-03</span><span class="badge abnormal">异常</span><span class="badge risk">高风险</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：12</span><span class="badge abnormal">异常类型：客户私自处置车辆 AND 无能力还款</span></div>
+        <div class="conflict warn">双卡命中：异常动作优先，常规动作可作为次级/抑制</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">申请委外（ACT134）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-异常处置动作 第21行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">委外派单及工作跟踪（ACT121）</span></div>
+        <div class="role">委外催收管理（ROLE002）</div>
+        <div class="source">乘用车-异常处置动作 第22行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">集中性风险处理（ACT137）</span></div>
+        <div class="role">资管（ROLE005）</div>
+        <div class="source">乘用车-异常处置动作 第23行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">诉讼执行（ACT136）</span></div>
+        <div class="role">诉讼管理（ROLE004）</div>
+        <div class="source">乘用车-异常处置动作 第24行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工发锁车短信（ACT010）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-常规贷后动作 第65行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">PV-A-04</span><span class="badge abnormal">异常</span><span class="badge risk">中风险</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：5</span><span class="badge abnormal">异常类型：有风险的第三方替名贷款</span></div>
+        <div class="conflict warn">双卡命中：异常动作优先，常规动作可作为次级/抑制</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">人工外呼（异常处置）（ACT100）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-异常处置动作 第11行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（失联修复）（ACT107）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-异常处置动作 第12行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（反馈异常客户与异常台帐）（ACT106）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-异常处置动作 第13行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">集中性风险处理（ACT137）</span></div>
+        <div class="role">资管（ROLE005）</div>
+        <div class="source">乘用车-异常处置动作 第14行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">委外派单及工作跟踪（ACT121）</span></div>
+        <div class="role">委外催收管理（ROLE002）</div>
+        <div class="source">乘用车-异常处置动作 第15行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">诉讼执行（ACT136）</span></div>
+        <div class="role">诉讼管理（ROLE004）</div>
+        <div class="source">乘用车-异常处置动作 第16行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工发征信提醒及征信影响短信+提醒保证人短信（ACT006）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-常规贷后动作 第37行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">PV-DUAL-01</span><span class="badge abnormal">异常</span><span class="badge risk">低风险</span><span class="badge state">客户阶段：新增</span><span class="badge abnormal">异常类型：疑似失联</span><span class="badge tag">AI外呼未接通</span><span class="badge tag">放款日次日</span><span class="badge tag">双卡命中模拟</span></div>
+        <div class="conflict warn">双卡命中：异常动作优先，常规动作可作为次级/抑制</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">人工外呼（异常处置）（ACT100）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-异常处置动作 第4行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">核实情况（ACT133）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-异常处置动作 第5行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（反馈异常客户与异常台帐）（ACT106）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-异常处置动作 第6行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">协调经销商督促客户保存回访号码（ACT013）</span></div>
+        <div class="role">区域（ROLE001）</div>
+        <div class="source">乘用车-常规贷后动作 第4行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">AI外呼（ACT001）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-常规贷后动作 第5行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">AI外呼（ACT001）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-常规贷后动作 第6行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">PV-DUAL-02</span><span class="badge abnormal">异常</span><span class="badge risk">中风险</span><span class="badge state">客户阶段：存量</span><span class="badge abnormal">异常类型：客户暂时还款困难希望变更还款计划</span><span class="badge tag">内催阶段</span><span class="badge tag">当前是否逾期=否</span><span class="badge tag">第一轮AI外呼未接</span><span class="badge tag">近三期有逾期记录</span><span class="badge tag">还款日前2天</span><span class="badge tag">双卡命中模拟</span></div>
+        <div class="conflict warn">双卡命中：异常动作优先，常规动作可作为次级/抑制</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">内催阶段贷后业务办理（ACT138）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-异常处置动作 第17行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">AI外呼（ACT001）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-常规贷后动作 第11行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">PV-DUAL-03</span><span class="badge abnormal">异常</span><span class="badge risk">高风险</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：12</span><span class="badge abnormal">异常类型：客户私自处置车辆 AND 无能力还款</span><span class="badge tag">无有效期内还款承诺</span><span class="badge tag">双卡命中模拟</span></div>
+        <div class="conflict warn">双卡命中：异常动作优先，常规动作可作为次级/抑制</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">申请委外（ACT134）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-异常处置动作 第21行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">委外派单及工作跟踪（ACT121）</span></div>
+        <div class="role">委外催收管理（ROLE002）</div>
+        <div class="source">乘用车-异常处置动作 第22行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">集中性风险处理（ACT137）</span></div>
+        <div class="role">资管（ROLE005）</div>
+        <div class="source">乘用车-异常处置动作 第23行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">诉讼执行（ACT136）</span></div>
+        <div class="role">诉讼管理（ROLE004）</div>
+        <div class="source">乘用车-异常处置动作 第24行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工发催收施压+律师函提醒短信（ACT003）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-常规贷后动作 第64行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工发锁车短信（ACT010）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-常规贷后动作 第65行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">锁车（ACT038）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-常规贷后动作 第68行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">发送律师函（ACT015）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-常规贷后动作 第69行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">PV-DUAL-04</span><span class="badge abnormal">异常</span><span class="badge risk">中风险</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：5</span><span class="badge abnormal">异常类型：有风险的第三方替名贷款</span><span class="badge tag">存在经销商阶段性担保</span><span class="badge tag">进入委外阶段</span><span class="badge tag">双卡命中模拟</span></div>
+        <div class="conflict warn">双卡命中：异常动作优先，常规动作可作为次级/抑制</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">人工外呼（异常处置）（ACT100）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-异常处置动作 第11行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（失联修复）（ACT107）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-异常处置动作 第12行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（反馈异常客户与异常台帐）（ACT106）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-异常处置动作 第13行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">集中性风险处理（ACT137）</span></div>
+        <div class="role">资管（ROLE005）</div>
+        <div class="source">乘用车-异常处置动作 第14行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">委外派单及工作跟踪（ACT121）</span></div>
+        <div class="role">委外催收管理（ROLE002）</div>
+        <div class="source">乘用车-异常处置动作 第15行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">诉讼执行（ACT136）</span></div>
+        <div class="role">诉讼管理（ROLE004）</div>
+        <div class="source">乘用车-异常处置动作 第16行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">提交委外电催申请（ACT020）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-常规贷后动作 第71行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">委外派单及工作跟踪（ACT018）</span></div>
+        <div class="role">委外催收管理（ROLE002）</div>
+        <div class="source">乘用车-常规贷后动作 第72行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">客户梳理并制定下一步催收动作（ACT019）</span></div>
+        <div class="role">委外催收管理（ROLE002）</div>
+        <div class="source">乘用车-常规贷后动作 第73行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">督促履行经销商担保责任（ACT029）</span></div>
+        <div class="role">区域（ROLE001）</div>
+        <div class="source">乘用车-常规贷后动作 第74行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">收车（ACT021）</span></div>
+        <div class="role">资管（ROLE005）</div>
+        <div class="source">乘用车-常规贷后动作 第76行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">PV-DUAL-05</span><span class="badge abnormal">异常</span><span class="badge risk">低风险</span><span class="badge state">客户阶段：新增</span><span class="badge abnormal">异常类型：疑似失联</span><span class="badge tag">AI外呼未接通</span><span class="badge tag">放款日次日</span><span class="badge tag">双卡命中模拟</span></div>
+        <div class="conflict warn">双卡命中：异常动作优先，常规动作可作为次级/抑制</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">人工外呼（异常处置）（ACT100）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-异常处置动作 第4行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">核实情况（ACT133）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-异常处置动作 第5行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（反馈异常客户与异常台帐）（ACT106）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-异常处置动作 第6行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">协调经销商督促客户保存回访号码（ACT013）</span></div>
+        <div class="role">区域（ROLE001）</div>
+        <div class="source">乘用车-常规贷后动作 第4行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">AI外呼（ACT001）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-常规贷后动作 第5行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">AI外呼（ACT001）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">乘用车-常规贷后动作 第6行</div>
+      </div></section>
+    </article></section><section id="tab-1" class="tab-panel">
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">TRG-R-01</span><span class="badge regular">常规</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：新增</span><span class="badge tag">人工回访未建联</span><span class="badge tag">放款日次日</span></div>
+        <div class="conflict ">未发现硬冲突</div>
+      </header>
+      <section class="actions">
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">AI外呼（ACT001）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-担保） 第4行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工发送回访短信（ACT008）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-担保） 第6行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工外呼（回访）（ACT012）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-担保） 第7行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">TRG-R-02</span><span class="badge regular">常规</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：31</span><span class="badge tag">未进入委外阶段</span><span class="badge tag">车辆已入库</span><span class="badge tag">风险经销商</span></div>
+        <div class="conflict ">未发现硬冲突</div>
+      </header>
+      <section class="actions">
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">梳理并发送委外清单至区域（ACT023）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-担保） 第24行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">车辆处置（ACT036）</span></div>
+        <div class="role">-</div>
+        <div class="source">商用车-常规贷后动作（中重卡-担保） 第28行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">移交非担保模式（ACT031）</span></div>
+        <div class="role">区域（ROLE001）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-担保） 第29行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">TRG-A-01</span><span class="badge abnormal">异常</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：存量</span><span class="badge abnormal">异常类型：还款困难</span></div>
+        <div class="conflict ">未发现硬冲突</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">收集客户办理贷后业务（延期一）需求，发送办理工单给区域（ACT124）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（中重卡-担保） 第11行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">TRG-A-02</span><span class="badge abnormal">异常</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：35</span><span class="badge abnormal">异常类型：失联</span></div>
+        <div class="conflict ">未发现硬冲突</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（协调经销商督促客户保存回访号码）（ACT105）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（中重卡-担保） 第10行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（失联修复）（ACT107）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（中重卡-担保） 第31行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">TRG-DUAL-01</span><span class="badge abnormal">异常</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：存量</span><span class="badge abnormal">异常类型：还款困难</span><span class="badge tag">人工回访未建联</span><span class="badge tag">放款日次日</span><span class="badge tag">双卡命中模拟</span></div>
+        <div class="conflict warn">双卡命中：异常动作优先，常规动作可作为次级/抑制</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">收集客户办理贷后业务（延期一）需求，发送办理工单给区域（ACT124）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（中重卡-担保） 第11行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">AI外呼（ACT001）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-担保） 第4行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工发送回访短信（ACT008）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-担保） 第6行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工外呼（回访）（ACT012）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-担保） 第7行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">TRG-DUAL-02</span><span class="badge abnormal">异常</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：35</span><span class="badge abnormal">异常类型：失联</span><span class="badge tag">人工回访未建联</span><span class="badge tag">放款日次日</span><span class="badge tag">双卡命中模拟</span></div>
+        <div class="conflict warn">双卡命中：异常动作优先，常规动作可作为次级/抑制</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（协调经销商督促客户保存回访号码）（ACT105）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（中重卡-担保） 第10行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（失联修复）（ACT107）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（中重卡-担保） 第31行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">AI外呼（ACT001）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-担保） 第4行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工发送回访短信（ACT008）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-担保） 第6行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工外呼（回访）（ACT012）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-担保） 第7行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">TRG-DUAL-03</span><span class="badge abnormal">异常</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：存量</span><span class="badge abnormal">异常类型：还款困难</span><span class="badge tag">人工回访未建联</span><span class="badge tag">放款日次日</span><span class="badge tag">双卡命中模拟</span></div>
+        <div class="conflict warn">双卡命中：异常动作优先，常规动作可作为次级/抑制</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">收集客户办理贷后业务（延期一）需求，发送办理工单给区域（ACT124）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（中重卡-担保） 第11行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">AI外呼（ACT001）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-担保） 第4行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工发送回访短信（ACT008）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-担保） 第6行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工外呼（回访）（ACT012）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-担保） 第7行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">TRG-DUAL-04</span><span class="badge abnormal">异常</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：35</span><span class="badge abnormal">异常类型：失联</span><span class="badge tag">人工回访未建联</span><span class="badge tag">放款日次日</span><span class="badge tag">双卡命中模拟</span></div>
+        <div class="conflict warn">双卡命中：异常动作优先，常规动作可作为次级/抑制</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（协调经销商督促客户保存回访号码）（ACT105）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（中重卡-担保） 第10行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（失联修复）（ACT107）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（中重卡-担保） 第31行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">AI外呼（ACT001）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-担保） 第4行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工发送回访短信（ACT008）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-担保） 第6行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工外呼（回访）（ACT012）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-担保） 第7行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">TRG-DUAL-05</span><span class="badge abnormal">异常</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：存量</span><span class="badge abnormal">异常类型：还款困难</span><span class="badge tag">人工回访未建联</span><span class="badge tag">放款日次日</span><span class="badge tag">双卡命中模拟</span></div>
+        <div class="conflict warn">双卡命中：异常动作优先，常规动作可作为次级/抑制</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">收集客户办理贷后业务（延期一）需求，发送办理工单给区域（ACT124）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（中重卡-担保） 第11行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">AI外呼（ACT001）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-担保） 第4行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工发送回访短信（ACT008）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-担保） 第6行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工外呼（回访）（ACT012）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-担保） 第7行</div>
+      </div></section>
+    </article></section><section id="tab-2" class="tab-panel">
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">TRN-R-01</span><span class="badge regular">常规</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：新增</span><span class="badge tag">人工回访未建联</span><span class="badge tag">人工外呼连续3天失败</span></div>
+        <div class="conflict ">未发现硬冲突</div>
+      </header>
+      <section class="actions">
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工发送回访短信（ACT008）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-非担保） 第6行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">反馈区域（ACT014）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-非担保） 第8行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">TRN-R-02</span><span class="badge regular">常规</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：20</span><span class="badge tag">人工外呼（催收）未接通</span><span class="badge tag">无有效期内还款承诺</span></div>
+        <div class="conflict ">未发现硬冲突</div>
+      </header>
+      <section class="actions">
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工外呼（催收）（ACT011）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-非担保） 第13行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工发征信提醒及征信影响短信+提醒保证人短信（ACT006）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-非担保） 第14行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">梳理锁车清单并发送至区域（ACT027）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-非担保） 第16行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">TRN-A-01</span><span class="badge abnormal">异常</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：45</span><span class="badge abnormal">异常类型：客户拒不还款（含：恶意逾期、车辆丢失、其他）</span></div>
+        <div class="conflict ">未发现硬冲突</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（核实情况，记录台帐，反馈区域）（ACT115）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（中重卡-非担保） 第14行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单（委外上门）（ACT108）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（中重卡-非担保） 第27行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（收车）（ACT110）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（中重卡-非担保） 第28行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">TRN-A-02</span><span class="badge abnormal">异常</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：70</span><span class="badge abnormal">异常类型：替名贷款</span></div>
+        <div class="conflict warn">双卡命中：异常动作优先，常规动作可作为次级/抑制</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（核实情况，记录台帐，制定措施）（ACT113）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（中重卡-非担保） 第13行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（核实情况，记录台帐，制定措施）（ACT113）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（中重卡-非担保） 第32行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">通报M2以上客户催收措施情况（ACT037）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-非担保） 第22行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">梳理并发送诉讼清单至区域（ACT024）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-非担保） 第23行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">TRN-DUAL-01</span><span class="badge abnormal">异常</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：45</span><span class="badge abnormal">异常类型：客户拒不还款（含：恶意逾期、车辆丢失、其他）</span><span class="badge tag">人工回访未建联</span><span class="badge tag">人工外呼连续3天失败</span><span class="badge tag">双卡命中模拟</span></div>
+        <div class="conflict warn">双卡命中：异常动作优先，常规动作可作为次级/抑制</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（核实情况，记录台帐，反馈区域）（ACT115）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（中重卡-非担保） 第14行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单（委外上门）（ACT108）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（中重卡-非担保） 第27行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（收车）（ACT110）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（中重卡-非担保） 第28行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工发送回访短信（ACT008）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-非担保） 第6行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">反馈区域（ACT014）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-非担保） 第8行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">TRN-DUAL-02</span><span class="badge abnormal">异常</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：70</span><span class="badge abnormal">异常类型：替名贷款</span><span class="badge tag">人工回访未建联</span><span class="badge tag">人工外呼连续3天失败</span><span class="badge tag">双卡命中模拟</span></div>
+        <div class="conflict warn">双卡命中：异常动作优先，常规动作可作为次级/抑制</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（核实情况，记录台帐，制定措施）（ACT113）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（中重卡-非担保） 第13行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（核实情况，记录台帐，制定措施）（ACT113）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（中重卡-非担保） 第32行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工发送回访短信（ACT008）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-非担保） 第6行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">反馈区域（ACT014）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-非担保） 第8行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">TRN-DUAL-03</span><span class="badge abnormal">异常</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：45</span><span class="badge abnormal">异常类型：客户拒不还款（含：恶意逾期、车辆丢失、其他）</span><span class="badge tag">人工回访未建联</span><span class="badge tag">人工外呼连续3天失败</span><span class="badge tag">双卡命中模拟</span></div>
+        <div class="conflict warn">双卡命中：异常动作优先，常规动作可作为次级/抑制</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（核实情况，记录台帐，反馈区域）（ACT115）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（中重卡-非担保） 第14行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单（委外上门）（ACT108）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（中重卡-非担保） 第27行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（收车）（ACT110）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（中重卡-非担保） 第28行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工发送回访短信（ACT008）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-非担保） 第6行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">反馈区域（ACT014）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-非担保） 第8行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">TRN-DUAL-04</span><span class="badge abnormal">异常</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：70</span><span class="badge abnormal">异常类型：替名贷款</span><span class="badge tag">人工回访未建联</span><span class="badge tag">人工外呼连续3天失败</span><span class="badge tag">双卡命中模拟</span></div>
+        <div class="conflict warn">双卡命中：异常动作优先，常规动作可作为次级/抑制</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（核实情况，记录台帐，制定措施）（ACT113）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（中重卡-非担保） 第13行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（核实情况，记录台帐，制定措施）（ACT113）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（中重卡-非担保） 第32行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工发送回访短信（ACT008）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-非担保） 第6行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">反馈区域（ACT014）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-非担保） 第8行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">TRN-DUAL-05</span><span class="badge abnormal">异常</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：45</span><span class="badge abnormal">异常类型：客户拒不还款（含：恶意逾期、车辆丢失、其他）</span><span class="badge tag">人工回访未建联</span><span class="badge tag">人工外呼连续3天失败</span><span class="badge tag">双卡命中模拟</span></div>
+        <div class="conflict warn">双卡命中：异常动作优先，常规动作可作为次级/抑制</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（核实情况，记录台帐，反馈区域）（ACT115）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（中重卡-非担保） 第14行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单（委外上门）（ACT108）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（中重卡-非担保） 第27行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（收车）（ACT110）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（中重卡-非担保） 第28行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工发送回访短信（ACT008）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-非担保） 第6行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">反馈区域（ACT014）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（中重卡-非担保） 第8行</div>
+      </div></section>
+    </article></section><section id="tab-3" class="tab-panel">
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">LTF-R-01</span><span class="badge regular">常规</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：新增</span><span class="badge tag">人工回访未建联</span><span class="badge tag">人工外呼连续3天失败</span></div>
+        <div class="conflict ">未发现硬冲突</div>
+      </header>
+      <section class="actions">
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工发送回访短信（ACT008）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（轻卡-燃油） 第6行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">反馈区域（ACT014）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（轻卡-燃油） 第8行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">LTF-R-02</span><span class="badge regular">常规</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：15</span><span class="badge tag">人工外呼（催收）未接通</span><span class="badge tag">无有效期内还款承诺</span></div>
+        <div class="conflict ">未发现硬冲突</div>
+      </header>
+      <section class="actions">
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工外呼（催收）（ACT011）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（轻卡-燃油） 第13行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工发送催收短信（ACT007）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（轻卡-燃油） 第14行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">发送律师函（ACT015）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（轻卡-燃油） 第15行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">LTF-A-01</span><span class="badge abnormal">异常</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：45</span><span class="badge abnormal">异常类型：还款困难</span></div>
+        <div class="conflict ">未发现硬冲突</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">收集客户办理贷后业务（延期还款、非标延期、利息减免）需求，发送工单给区域（ACT127）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-燃油） 第9行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">收集客户办理贷后业务（延期还款、非标延期、利息减免）需求，发送工单给区域（ACT127）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-燃油） 第17行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">LTF-A-02</span><span class="badge abnormal">异常</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：70</span><span class="badge abnormal">异常类型：客户拒不还款（含：恶意逾期、车辆丢失、其他）</span></div>
+        <div class="conflict warn">双卡命中：异常动作优先，常规动作可作为次级/抑制</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（核实情况，记录台帐，反馈区域）（ACT115）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-燃油） 第11行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（委外电催）（ACT109）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-燃油） 第24行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（收车）（ACT110）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-燃油） 第25行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单（诉讼）（ACT120）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-燃油） 第26行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">梳理并发送诉讼清单至区域（ACT024）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（轻卡-燃油） 第21行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">LTF-DUAL-01</span><span class="badge abnormal">异常</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：45</span><span class="badge abnormal">异常类型：还款困难</span><span class="badge tag">人工回访未建联</span><span class="badge tag">人工外呼连续3天失败</span><span class="badge tag">双卡命中模拟</span></div>
+        <div class="conflict warn">双卡命中：异常动作优先，常规动作可作为次级/抑制</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">收集客户办理贷后业务（延期还款、非标延期、利息减免）需求，发送工单给区域（ACT127）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-燃油） 第9行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">收集客户办理贷后业务（延期还款、非标延期、利息减免）需求，发送工单给区域（ACT127）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-燃油） 第17行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工发送回访短信（ACT008）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（轻卡-燃油） 第6行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">反馈区域（ACT014）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（轻卡-燃油） 第8行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">LTF-DUAL-02</span><span class="badge abnormal">异常</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：70</span><span class="badge abnormal">异常类型：客户拒不还款（含：恶意逾期、车辆丢失、其他）</span><span class="badge tag">人工回访未建联</span><span class="badge tag">人工外呼连续3天失败</span><span class="badge tag">双卡命中模拟</span></div>
+        <div class="conflict warn">双卡命中：异常动作优先，常规动作可作为次级/抑制</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（核实情况，记录台帐，反馈区域）（ACT115）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-燃油） 第11行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（委外电催）（ACT109）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-燃油） 第24行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（收车）（ACT110）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-燃油） 第25行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单（诉讼）（ACT120）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-燃油） 第26行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工发送回访短信（ACT008）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（轻卡-燃油） 第6行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">反馈区域（ACT014）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（轻卡-燃油） 第8行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">LTF-DUAL-03</span><span class="badge abnormal">异常</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：45</span><span class="badge abnormal">异常类型：还款困难</span><span class="badge tag">人工回访未建联</span><span class="badge tag">人工外呼连续3天失败</span><span class="badge tag">双卡命中模拟</span></div>
+        <div class="conflict warn">双卡命中：异常动作优先，常规动作可作为次级/抑制</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">收集客户办理贷后业务（延期还款、非标延期、利息减免）需求，发送工单给区域（ACT127）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-燃油） 第9行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">收集客户办理贷后业务（延期还款、非标延期、利息减免）需求，发送工单给区域（ACT127）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-燃油） 第17行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工发送回访短信（ACT008）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（轻卡-燃油） 第6行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">反馈区域（ACT014）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（轻卡-燃油） 第8行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">LTF-DUAL-04</span><span class="badge abnormal">异常</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：70</span><span class="badge abnormal">异常类型：客户拒不还款（含：恶意逾期、车辆丢失、其他）</span><span class="badge tag">人工回访未建联</span><span class="badge tag">人工外呼连续3天失败</span><span class="badge tag">双卡命中模拟</span></div>
+        <div class="conflict warn">双卡命中：异常动作优先，常规动作可作为次级/抑制</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（核实情况，记录台帐，反馈区域）（ACT115）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-燃油） 第11行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（委外电催）（ACT109）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-燃油） 第24行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（收车）（ACT110）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-燃油） 第25行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单（诉讼）（ACT120）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-燃油） 第26行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工发送回访短信（ACT008）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（轻卡-燃油） 第6行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">反馈区域（ACT014）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（轻卡-燃油） 第8行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">LTF-DUAL-05</span><span class="badge abnormal">异常</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：45</span><span class="badge abnormal">异常类型：还款困难</span><span class="badge tag">人工回访未建联</span><span class="badge tag">人工外呼连续3天失败</span><span class="badge tag">双卡命中模拟</span></div>
+        <div class="conflict warn">双卡命中：异常动作优先，常规动作可作为次级/抑制</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">收集客户办理贷后业务（延期还款、非标延期、利息减免）需求，发送工单给区域（ACT127）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-燃油） 第9行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">收集客户办理贷后业务（延期还款、非标延期、利息减免）需求，发送工单给区域（ACT127）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-燃油） 第17行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工发送回访短信（ACT008）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（轻卡-燃油） 第6行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">反馈区域（ACT014）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（轻卡-燃油） 第8行</div>
+      </div></section>
+    </article></section><section id="tab-4" class="tab-panel">
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">LTE-R-01</span><span class="badge regular">常规</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：存量</span><span class="badge tag">当前是否逾期=否</span><span class="badge tag">近三期有逾期记录</span><span class="badge tag">还款日前3天</span></div>
+        <div class="conflict ">未发现硬冲突</div>
+      </header>
+      <section class="actions">
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">AI外呼（ACT001）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（轻卡-新能源） 第4行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">LTE-R-02</span><span class="badge regular">常规</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：20</span><span class="badge tag">存在经销商阶段性担保</span><span class="badge tag">无有效期内还款承诺</span></div>
+        <div class="conflict ">未发现硬冲突</div>
+      </header>
+      <section class="actions">
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工外呼（催收）（ACT011）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（轻卡-新能源） 第8行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">梳理锁车清单并发送至区域（ACT027）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（轻卡-新能源） 第9行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">督促履行渠道担保责任（ACT028）</span></div>
+        <div class="role">资管（ROLE005）</div>
+        <div class="source">商用车-常规贷后动作（轻卡-新能源） 第16行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">LTE-A-01</span><span class="badge abnormal">异常</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：20</span><span class="badge abnormal">异常类型：客户拒不还款（含：恶意逾期、车辆丢失、其他）</span></div>
+        <div class="conflict warn">双卡命中：异常动作优先，常规动作可作为次级/抑制</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（收车）（ACT110）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-新能源） 第8行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（收车）（ACT110）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-新能源） 第14行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（委外电催）（ACT109）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-新能源） 第15行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单（委外上门）（ACT108）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-新能源） 第16行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">人工外呼（催收）（ACT011）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（轻卡-新能源） 第8行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">LTE-A-02</span><span class="badge abnormal">异常</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：70</span><span class="badge abnormal">异常类型：客户继续运营车辆但还款困难</span></div>
+        <div class="conflict warn">双卡命中：异常动作优先，常规动作可作为次级/抑制</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">收集客户办理贷后业务（贷款重组、利息减免、消保基金）需求，发送工单给区域（ACT128）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-新能源） 第24行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单（诉讼）（ACT120）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-新能源） 第25行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">梳理并发送诉讼清单至区域（ACT024）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（轻卡-新能源） 第17行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">LTE-DUAL-01</span><span class="badge abnormal">异常</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：20</span><span class="badge abnormal">异常类型：客户拒不还款（含：恶意逾期、车辆丢失、其他）</span><span class="badge tag">当前是否逾期=否</span><span class="badge tag">近三期有逾期记录</span><span class="badge tag">还款日前3天</span><span class="badge tag">双卡命中模拟</span></div>
+        <div class="conflict warn">双卡命中：异常动作优先，常规动作可作为次级/抑制</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（收车）（ACT110）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-新能源） 第8行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（收车）（ACT110）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-新能源） 第14行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（委外电催）（ACT109）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-新能源） 第15行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单（委外上门）（ACT108）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-新能源） 第16行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">AI外呼（ACT001）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（轻卡-新能源） 第4行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">LTE-DUAL-02</span><span class="badge abnormal">异常</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：70</span><span class="badge abnormal">异常类型：客户继续运营车辆但还款困难</span><span class="badge tag">当前是否逾期=否</span><span class="badge tag">近三期有逾期记录</span><span class="badge tag">还款日前3天</span><span class="badge tag">双卡命中模拟</span></div>
+        <div class="conflict warn">双卡命中：异常动作优先，常规动作可作为次级/抑制</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">收集客户办理贷后业务（贷款重组、利息减免、消保基金）需求，发送工单给区域（ACT128）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-新能源） 第24行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单（诉讼）（ACT120）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-新能源） 第25行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">AI外呼（ACT001）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（轻卡-新能源） 第4行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">LTE-DUAL-03</span><span class="badge abnormal">异常</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：20</span><span class="badge abnormal">异常类型：客户拒不还款（含：恶意逾期、车辆丢失、其他）</span><span class="badge tag">当前是否逾期=否</span><span class="badge tag">近三期有逾期记录</span><span class="badge tag">还款日前3天</span><span class="badge tag">双卡命中模拟</span></div>
+        <div class="conflict warn">双卡命中：异常动作优先，常规动作可作为次级/抑制</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（收车）（ACT110）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-新能源） 第8行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（收车）（ACT110）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-新能源） 第14行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（委外电催）（ACT109）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-新能源） 第15行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单（委外上门）（ACT108）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-新能源） 第16行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">AI外呼（ACT001）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（轻卡-新能源） 第4行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">LTE-DUAL-04</span><span class="badge abnormal">异常</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：70</span><span class="badge abnormal">异常类型：客户继续运营车辆但还款困难</span><span class="badge tag">当前是否逾期=否</span><span class="badge tag">近三期有逾期记录</span><span class="badge tag">还款日前3天</span><span class="badge tag">双卡命中模拟</span></div>
+        <div class="conflict warn">双卡命中：异常动作优先，常规动作可作为次级/抑制</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">收集客户办理贷后业务（贷款重组、利息减免、消保基金）需求，发送工单给区域（ACT128）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-新能源） 第24行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单（诉讼）（ACT120）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-新能源） 第25行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">AI外呼（ACT001）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（轻卡-新能源） 第4行</div>
+      </div></section>
+    </article>
+
+    <article class="customer-card">
+      <header class="customer-head">
+        <div class="tags"><span class="badge id">LTE-DUAL-05</span><span class="badge abnormal">异常</span><span class="badge risk">未配置风险等级</span><span class="badge state">客户阶段：存量</span><span class="badge state">逾期天数：20</span><span class="badge abnormal">异常类型：客户拒不还款（含：恶意逾期、车辆丢失、其他）</span><span class="badge tag">当前是否逾期=否</span><span class="badge tag">近三期有逾期记录</span><span class="badge tag">还款日前3天</span><span class="badge tag">双卡命中模拟</span></div>
+        <div class="conflict warn">双卡命中：异常动作优先，常规动作可作为次级/抑制</div>
+      </header>
+      <section class="actions">
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（收车）（ACT110）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-新能源） 第8行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（收车）（ACT110）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-新能源） 第14行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单给区域（委外电催）（ACT109）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-新能源） 第15行</div>
+      </div>
+
+      <div class="action abnormal">
+        <div class="action-main"><span class="type">异常</span><span class="action-name">发送工单（委外上门）（ACT108）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-异常处置动作（轻卡-新能源） 第16行</div>
+      </div>
+
+      <div class="action ">
+        <div class="action-main"><span class="type">常规</span><span class="action-name">AI外呼（ACT001）</span></div>
+        <div class="role">客服中心（ROLE003）</div>
+        <div class="source">商用车-常规贷后动作（轻卡-新能源） 第4行</div>
+      </div></section>
+    </article></section>
+  </main>
+  <script>const tabs=Array.from(document.querySelectorAll('.tab'));const panels=Array.from(document.querySelectorAll('.tab-panel'));tabs.forEach((tab)=>{tab.addEventListener('click',()=>{const id=tab.dataset.tab;tabs.forEach((item)=>item.classList.toggle('active',item===tab));panels.forEach((panel)=>panel.classList.toggle('active',panel.id===id));});});</script>
+</body>
+</html>
