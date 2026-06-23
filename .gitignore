@@ -1,0 +1,21 @@
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Python
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+
+# Local cache
+.pycache-local/
+**/.pycache-local/
+
+# IDE
+.vscode/
+.idea/
+
+# Environment
+.env
+.env.local
