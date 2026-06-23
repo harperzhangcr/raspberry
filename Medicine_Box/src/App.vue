@@ -1,0 +1,638 @@
+<template>
+  <main class="app-shell">
+    <section v-if="!familyCode" class="access-page">
+      <div class="access-panel">
+        <div class="access-mark" aria-hidden="true">＋</div>
+        <p class="eyebrow">家庭自用</p>
+        <h1>家庭药箱</h1>
+        <p class="access-copy">输入家庭访问码后继续，下次打开会自动进入。</p>
+
+        <div class="access-form">
+          <van-field
+            v-model="codeInput"
+            type="password"
+            label="访问码"
+            placeholder="请输入家庭访问码"
+            clearable
+            @keyup.enter="handleVerifyCode"
+          />
+          <van-button type="primary" block :loading="loading" @click="handleVerifyCode">进入药箱</van-button>
+        </div>
+      </div>
+    </section>
+
+    <section v-else class="medicine-app">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Family Medicine Box</p>
+          <h1>家庭药箱</h1>
+          <p class="topbar-subtitle">快速找到家里的常用药</p>
+        </div>
+        <div class="topbar-actions">
+          <van-button size="small" plain @click="openRecycleBin">回收站</van-button>
+          <van-button size="small" plain type="primary" @click="resetCode">更换访问码</van-button>
+        </div>
+      </header>
+
+      <div class="search-wrap">
+        <van-search v-model="keyword" placeholder="搜索药品名称" shape="round" />
+      </div>
+
+      <van-tabs v-model:active="activeTab" class="tabs-shell">
+        <van-tab title="分类药箱" name="home">
+          <section class="toolbar">
+            <van-button icon="plus" type="primary" size="small" @click="openCreateForm">新增药品</van-button>
+            <van-button icon="apps-o" size="small" @click="showCategoryManager = true">管理分类</van-button>
+          </section>
+
+          <section v-if="loading && medicines.length === 0" class="loading-panel">
+            <van-loading color="var(--color-primary)">正在整理药箱</van-loading>
+          </section>
+          <van-empty v-else-if="categoryGroups.length === 0" description="暂无药品，先新增常用药" />
+          <section v-else class="category-list">
+            <article v-for="group in categoryGroups" :key="group.category" class="category-section">
+              <button
+                class="category-header"
+                :class="{ 'category-header--visual': getCategoryAsset(group.category) }"
+                type="button"
+                @click="toggleCategory(group.category)"
+              >
+                <img
+                  v-if="getCategoryAsset(group.category)"
+                  class="category-banner"
+                  :src="getCategoryAsset(group.category)"
+                  alt=""
+                  loading="lazy"
+                />
+                <div class="category-header-main">
+                  <h2>{{ group.category }}</h2>
+                  <div class="category-flags">
+                    <van-tag v-if="group.hasOutOfStock" type="danger">有缺货</van-tag>
+                    <van-tag v-if="group.hasExpired" type="danger" plain>有过期</van-tag>
+                  </div>
+                </div>
+                <div class="category-meta">
+                  <span class="category-count">{{ group.medicines.length }} 种</span>
+                  <span class="category-toggle" :class="{ 'category-toggle--open': isCategoryExpanded(group.category) }">
+                    <van-icon name="arrow-down" />
+                  </span>
+                </div>
+              </button>
+
+              <div v-if="isCategoryExpanded(group.category)" class="card-grid">
+                <MedicineCard
+                  v-for="medicine in group.medicines"
+                  :key="medicine._id"
+                  :medicine="medicine"
+                  @detail="openDetail"
+                  @edit="openEditForm"
+                  @delete="handleDelete"
+                  @adjust="handleAdjustQuantity"
+                  @add-batch="openBatchForm"
+                />
+              </div>
+            </article>
+          </section>
+        </van-tab>
+
+        <van-tab title="全部列表" name="list">
+          <section class="filters">
+            <van-dropdown-menu>
+              <van-dropdown-item v-model="selectedCategory" :options="categoryOptions" />
+              <van-dropdown-item v-model="statusFilter" :options="statusOptions" />
+            </van-dropdown-menu>
+          </section>
+
+          <section v-if="loading && medicines.length === 0" class="loading-panel">
+            <van-loading color="var(--color-primary)">正在加载药品</van-loading>
+          </section>
+          <van-empty v-else-if="filteredMedicines.length === 0" description="没有匹配的药品" />
+          <section v-else class="list-stack">
+            <MedicineCard
+              v-for="medicine in filteredMedicines"
+              :key="medicine._id"
+              :medicine="medicine"
+              @detail="openDetail"
+              @edit="openEditForm"
+              @delete="handleDelete"
+              @adjust="handleAdjustQuantity"
+              @add-batch="openBatchForm"
+            />
+          </section>
+        </van-tab>
+      </van-tabs>
+    </section>
+
+    <van-popup v-model:show="showForm" position="bottom" round class="sheet-popup">
+      <MedicineForm
+        :key="formKey"
+        :medicine="editingMedicine"
+        :categories="categories"
+        @cancel="showForm = false"
+        @submit="handleSubmitMedicine"
+      />
+    </van-popup>
+
+    <van-popup v-model:show="showBatchForm" position="bottom" round class="sheet-popup">
+      <section v-if="batchMedicine" class="batch-panel">
+        <div class="sheet-title">
+          <div>
+            <p class="eyebrow">Add Stock</p>
+            <h2>新增库存</h2>
+          </div>
+          <van-button icon="cross" size="small" plain @click="showBatchForm = false" />
+        </div>
+        <div class="batch-target">
+          <strong>{{ batchMedicine.name }}</strong>
+          <span>当前 {{ batchMedicine.quantity }}{{ batchMedicine.unit }}</span>
+        </div>
+        <van-form class="batch-form" @submit="handleSubmitBatch">
+          <div class="detail-card">
+            <van-field
+              v-model="batchForm.expiryDate"
+              type="date"
+              name="expiryDate"
+              label="保质期"
+              :rules="[{ required: true, message: '请选择保质期' }]"
+            />
+            <van-field
+              v-model="batchQuantityInput"
+              type="number"
+              name="quantity"
+              label="本次数量"
+              placeholder="例如：2"
+              :rules="[{ required: true, message: '请输入本次数量' }]"
+            />
+          </div>
+          <div class="form-save-bar">
+            <van-button block type="primary" native-type="submit">保存库存</van-button>
+          </div>
+        </van-form>
+      </section>
+    </van-popup>
+
+    <van-popup v-model:show="showDetail" position="bottom" round class="sheet-popup">
+      <section v-if="detailMedicine" class="detail-panel">
+        <div class="sheet-title">
+          <h2>{{ detailMedicine.name }}</h2>
+          <van-button icon="cross" size="small" plain @click="showDetail = false" />
+        </div>
+        <div class="detail-tags">
+          <van-tag
+            v-for="label in getMedicineStatus(detailMedicine).labels"
+            :key="label.text"
+            :type="label.type"
+          >
+            {{ label.text }}
+          </van-tag>
+        </div>
+        <div v-if="detailImageUrl" class="detail-photo">
+          <img :src="detailImageUrl" :alt="detailMedicine.name" />
+        </div>
+        <div class="detail-card">
+          <van-cell title="分类" :value="detailMedicine.category" />
+          <van-cell title="数量" :value="`${detailMedicine.quantity}${detailMedicine.unit}`" />
+          <van-cell title="有效期" :value="detailMedicine.expiryDate" />
+          <van-cell v-if="detailMedicine.location" title="存放位置" :value="detailMedicine.location" />
+          <div class="detail-note-row">
+            <span>备注</span>
+            <p>{{ detailMedicine.note || '无' }}</p>
+          </div>
+          <van-cell title="更新时间" :value="formatDateTime(detailMedicine.updatedAt)" />
+        </div>
+      </section>
+    </van-popup>
+
+    <van-popup v-model:show="showCategoryManager" position="bottom" round class="sheet-popup">
+      <section class="category-manager">
+        <div class="sheet-title">
+          <h2>管理分类</h2>
+          <van-button icon="cross" size="small" plain @click="showCategoryManager = false" />
+        </div>
+        <div class="category-card">
+          <div class="category-add-row">
+            <van-field v-model="newCategory" label="新增分类" placeholder="例如：眼耳鼻喉" />
+            <van-button class="category-action-button" size="small" type="primary" @click="addCategory">新增</van-button>
+          </div>
+        </div>
+        <div class="category-card category-edit-list">
+          <van-cell v-for="category in categories" :key="category" :title="category">
+            <template #right-icon>
+              <van-button class="category-action-button" size="small" plain @click="startRenameCategory(category)">修改</van-button>
+            </template>
+          </van-cell>
+        </div>
+      </section>
+    </van-popup>
+
+    <van-popup v-model:show="showRecycleBin" position="bottom" round class="sheet-popup">
+      <section class="recycle-panel">
+        <div class="sheet-title">
+          <div>
+            <p class="eyebrow">Recycle Bin</p>
+            <h2>回收站</h2>
+          </div>
+          <van-button icon="cross" size="small" plain @click="showRecycleBin = false" />
+        </div>
+
+        <section v-if="recycleLoading" class="loading-panel">
+          <van-loading color="var(--color-primary)">正在加载回收站</van-loading>
+        </section>
+        <van-empty v-else-if="deletedMedicines.length === 0" description="回收站是空的" />
+        <section v-else class="recycle-list">
+          <RecycleMedicineCard
+            v-for="medicine in deletedMedicines"
+            :key="medicine._id"
+            :medicine="medicine"
+            @restore="handleRestoreMedicine"
+            @permanent-delete="handlePermanentDelete"
+          />
+        </section>
+      </section>
+    </van-popup>
+
+    <van-dialog
+      v-model:show="showRenameDialog"
+      title="修改分类名称"
+      show-cancel-button
+      @confirm="confirmRenameCategory"
+    >
+      <van-field v-model="renameCategoryValue" placeholder="请输入新的分类名称" />
+    </van-dialog>
+  </main>
+</template>
+
+<script setup lang="ts">
+import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { showConfirmDialog, showFailToast, showSuccessToast } from 'vant';
+import MedicineCard from './components/MedicineCard.vue';
+import MedicineForm from './components/MedicineForm.vue';
+import RecycleMedicineCard from './components/RecycleMedicineCard.vue';
+import { getCategoryAsset } from './categoryAssets';
+import { DEFAULT_CATEGORIES, FAMILY_CODE_STORAGE_KEY } from './constants';
+import { medicineApi } from './services/medicineApi';
+import { resolveMedicineImageUrl } from './services/medicineStorage';
+import type { Medicine, MedicineBatchInput, MedicineInput, StatusFilter } from './types';
+import {
+  filterMedicines,
+  formatDateTime,
+  getCategories,
+  getMedicineStatus,
+  groupByCategory,
+} from './utils/medicine';
+
+const familyCode = ref(localStorage.getItem(FAMILY_CODE_STORAGE_KEY) || '');
+const CATEGORY_STORAGE_KEY = 'family_medicine_box_categories';
+const codeInput = ref('');
+const medicines = ref<Medicine[]>([]);
+const deletedMedicines = ref<Medicine[]>([]);
+
+function readStoredCategories() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(CATEGORY_STORAGE_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed.filter((item) => typeof item === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+const customCategories = ref<string[]>(readStoredCategories());
+const keyword = ref('');
+const selectedCategory = ref('全部');
+const statusFilter = ref<StatusFilter>('all');
+const activeTab = ref('home');
+const expandedCategories = ref<string[]>([]);
+const loading = ref(false);
+const recycleLoading = ref(false);
+const showForm = ref(false);
+const formKey = ref(0);
+const editingMedicine = ref<Medicine | null>(null);
+const showDetail = ref(false);
+const detailMedicine = ref<Medicine | null>(null);
+const detailImageUrl = ref('');
+const showBatchForm = ref(false);
+const batchMedicine = ref<Medicine | null>(null);
+const batchForm = reactive<MedicineBatchInput>({
+  expiryDate: '',
+  quantity: 1,
+});
+const batchQuantityInput = ref('1');
+const showCategoryManager = ref(false);
+const showRecycleBin = ref(false);
+const newCategory = ref('');
+const showRenameDialog = ref(false);
+const renameCategorySource = ref('');
+const renameCategoryValue = ref('');
+
+const categories = computed(() => getCategories(medicines.value, customCategories.value));
+const categoryGroups = computed(() => {
+  const visible = filterMedicines(medicines.value, keyword.value, '全部', 'all');
+  return groupByCategory(visible, categories.value);
+});
+const filteredMedicines = computed(() =>
+  filterMedicines(medicines.value, keyword.value, selectedCategory.value, statusFilter.value),
+);
+const categoryOptions = computed(() => [
+  { text: '全部分类', value: '全部' },
+  ...categories.value.map((category) => ({ text: category, value: category })),
+]);
+const statusOptions = [
+  { text: '全部状态', value: 'all' },
+  { text: '有库存', value: 'inStock' },
+  { text: '缺货', value: 'outOfStock' },
+  { text: '已过期', value: 'expired' },
+  { text: '30天内过期', value: 'expiringSoon' },
+];
+
+function normalizeMedicineName(name: string) {
+  return name.trim().toLowerCase();
+}
+
+function findDuplicateMedicine(name: string) {
+  const normalizedName = normalizeMedicineName(name);
+  return medicines.value.find((item) => normalizeMedicineName(item.name) === normalizedName);
+}
+
+function isDialogCancel(error: unknown) {
+  return error === 'cancel' || error === 'overlay';
+}
+
+function isCategoryExpanded(category: string) {
+  if (keyword.value.trim()) return true;
+  return expandedCategories.value.includes(category);
+}
+
+function toggleCategory(category: string) {
+  if (expandedCategories.value.includes(category)) {
+    expandedCategories.value = expandedCategories.value.filter((item) => item !== category);
+    return;
+  }
+  expandedCategories.value = [...expandedCategories.value, category];
+}
+
+async function loadMedicines() {
+  if (!familyCode.value) return;
+  loading.value = true;
+  try {
+    medicines.value = await medicineApi.list(familyCode.value);
+  } catch (error) {
+    showFailToast(error instanceof Error ? error.message : '加载失败');
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function loadDeletedMedicines() {
+  if (!familyCode.value) return;
+  recycleLoading.value = true;
+  try {
+    deletedMedicines.value = await medicineApi.listDeletedMedicines(familyCode.value);
+  } catch (error) {
+    showFailToast(error instanceof Error ? error.message : '回收站加载失败');
+  } finally {
+    recycleLoading.value = false;
+  }
+}
+
+async function handleVerifyCode() {
+  const value = codeInput.value.trim();
+  if (!value) {
+    showFailToast('请输入家庭访问码');
+    return;
+  }
+  loading.value = true;
+  try {
+    await medicineApi.verifyFamilyCode(value);
+    familyCode.value = value;
+    localStorage.setItem(FAMILY_CODE_STORAGE_KEY, value);
+    showSuccessToast('已进入家庭药箱');
+    await loadMedicines();
+  } catch (error) {
+    showFailToast(error instanceof Error ? error.message : '访问码校验失败');
+  } finally {
+    loading.value = false;
+  }
+}
+
+function resetCode() {
+  localStorage.removeItem(FAMILY_CODE_STORAGE_KEY);
+  familyCode.value = '';
+  codeInput.value = '';
+  medicines.value = [];
+  deletedMedicines.value = [];
+}
+
+async function openRecycleBin() {
+  showRecycleBin.value = true;
+  await loadDeletedMedicines();
+}
+
+function openCreateForm() {
+  editingMedicine.value = null;
+  formKey.value += 1;
+  showForm.value = true;
+}
+
+function openEditForm(medicine: Medicine) {
+  editingMedicine.value = medicine;
+  formKey.value += 1;
+  showForm.value = true;
+}
+
+function openDetail(medicine: Medicine) {
+  detailMedicine.value = medicine;
+  showDetail.value = true;
+}
+
+function openBatchForm(medicine: Medicine) {
+  batchMedicine.value = medicine;
+  batchForm.expiryDate = medicine.expiryDate;
+  batchForm.quantity = 1;
+  batchQuantityInput.value = '1';
+  showBatchForm.value = true;
+}
+
+async function handleSubmitMedicine(payload: MedicineInput) {
+  try {
+    if (editingMedicine.value) {
+      await medicineApi.update(familyCode.value, { ...payload, _id: editingMedicine.value._id });
+      showSuccessToast('已更新药品');
+    } else {
+      const duplicateMedicine = findDuplicateMedicine(payload.name);
+      if (duplicateMedicine) {
+        if (payload.quantity <= 0) {
+          showFailToast('同名药品已存在，本次数量需大于 0 才能加入库存');
+          return;
+        }
+        await showConfirmDialog({
+          title: '发现已存在同名药品',
+          message: `${duplicateMedicine.name}\n\n是否将本次库存加入现有药品？`,
+          confirmButtonText: '加入库存',
+          cancelButtonText: '取消',
+        });
+        await medicineApi.add(familyCode.value, payload);
+        showSuccessToast('已加入库存');
+        showForm.value = false;
+        formKey.value += 1;
+        await loadMedicines();
+        if (!expandedCategories.value.includes(duplicateMedicine.category)) {
+          expandedCategories.value = [...expandedCategories.value, duplicateMedicine.category];
+        }
+        return;
+      }
+      await medicineApi.add(familyCode.value, payload);
+      showSuccessToast('已新增药品');
+    }
+    showForm.value = false;
+    formKey.value += 1;
+    await loadMedicines();
+    if (!expandedCategories.value.includes(payload.category)) {
+      expandedCategories.value = [...expandedCategories.value, payload.category];
+    }
+  } catch (error) {
+    if (isDialogCancel(error)) return;
+    showFailToast(error instanceof Error ? error.message : '保存失败');
+  }
+}
+
+async function handleDelete(medicine: Medicine) {
+  try {
+    await showConfirmDialog({
+      title: '删除药品',
+      message: '删除后可在回收站恢复，确定删除吗？',
+    });
+    await medicineApi.delete(familyCode.value, medicine._id);
+    showSuccessToast('已删除');
+    await loadMedicines();
+  } catch (error) {
+    if (!isDialogCancel(error)) {
+      showFailToast(error instanceof Error ? error.message : '删除失败');
+    }
+  }
+}
+
+async function handleRestoreMedicine(medicine: Medicine) {
+  try {
+    await medicineApi.restoreMedicine(familyCode.value, medicine._id);
+    showSuccessToast('已恢复');
+    await Promise.all([loadMedicines(), loadDeletedMedicines()]);
+  } catch (error) {
+    showFailToast(error instanceof Error ? error.message : '恢复失败');
+  }
+}
+
+async function handlePermanentDelete(medicine: Medicine) {
+  try {
+    await showConfirmDialog({
+      title: '永久删除药品',
+      message: '永久删除后无法恢复，确定吗？',
+    });
+    await medicineApi.permanentDeleteMedicine(familyCode.value, medicine._id);
+    showSuccessToast('已永久删除');
+    await loadDeletedMedicines();
+  } catch (error) {
+    if (!isDialogCancel(error)) {
+      showFailToast(error instanceof Error ? error.message : '永久删除失败');
+    }
+  }
+}
+
+async function handleAdjustQuantity(medicine: Medicine, delta: -1) {
+  try {
+    await medicineApi.adjustQuantity(familyCode.value, medicine._id, delta);
+    await loadMedicines();
+  } catch (error) {
+    showFailToast(error instanceof Error ? error.message : '库存更新失败');
+  }
+}
+
+async function handleSubmitBatch() {
+  if (!batchMedicine.value) return;
+  const quantity = Math.max(1, Number(batchQuantityInput.value) || 1);
+  try {
+    await medicineApi.addBatch(familyCode.value, batchMedicine.value._id, {
+      expiryDate: batchForm.expiryDate,
+      quantity,
+    });
+    showBatchForm.value = false;
+    showSuccessToast('已新增库存');
+    await loadMedicines();
+  } catch (error) {
+    showFailToast(error instanceof Error ? error.message : '库存新增失败');
+  }
+}
+
+function addCategory() {
+  const value = newCategory.value.trim();
+  if (!value) {
+    showFailToast('请输入分类名称');
+    return;
+  }
+  if (categories.value.includes(value)) {
+    showFailToast('分类已存在');
+    return;
+  }
+  customCategories.value.push(value);
+  newCategory.value = '';
+  showSuccessToast('分类已新增');
+}
+
+function startRenameCategory(category: string) {
+  renameCategorySource.value = category;
+  renameCategoryValue.value = category;
+  showRenameDialog.value = true;
+}
+
+async function confirmRenameCategory() {
+  const source = renameCategorySource.value;
+  const target = renameCategoryValue.value.trim();
+  if (!target || source === target) return;
+  if (categories.value.includes(target)) {
+    showFailToast('分类已存在');
+    return;
+  }
+
+  const affected = medicines.value.filter((item) => item.category === source);
+  try {
+    await Promise.all(
+      affected.map((item) =>
+        medicineApi.update(familyCode.value, {
+          _id: item._id,
+          category: target,
+        }),
+      ),
+    );
+    customCategories.value = customCategories.value.map((item) => (item === source ? target : item));
+    if (!DEFAULT_CATEGORIES.includes(source) && !customCategories.value.includes(target)) {
+      customCategories.value.push(target);
+    }
+    await loadMedicines();
+    showSuccessToast('分类已修改');
+  } catch (error) {
+    showFailToast(error instanceof Error ? error.message : '分类修改失败');
+  }
+}
+
+onMounted(loadMedicines);
+
+watch(
+  customCategories,
+  (value) => {
+    localStorage.setItem(CATEGORY_STORAGE_KEY, JSON.stringify(value));
+  },
+  { deep: true },
+);
+
+let detailImageRequestId = 0;
+watch(
+  () => detailMedicine.value?.imageUrl,
+  async (imageUrl) => {
+    const requestId = ++detailImageRequestId;
+    detailImageUrl.value = '';
+    const resolved = await resolveMedicineImageUrl(imageUrl);
+    if (requestId === detailImageRequestId) {
+      detailImageUrl.value = resolved;
+    }
+  },
+);
+</script>

@@ -1,0 +1,79 @@
+:root {
+  --color-bg: #f5f5f7;
+  --color-bg-soft: #fbfbfd;
+  --color-card: rgba(255, 255, 255, 0.92);
+  --color-card-solid: #ffffff;
+  --color-text: #1d1d1f;
+  --color-text-secondary: #6e6e73;
+  --color-text-tertiary: #8e8e93;
+  --color-border: rgba(60, 60, 67, 0.12);
+  --color-border-strong: rgba(60, 60, 67, 0.18);
+  --color-primary: #0071e3;
+  --color-primary-soft: rgba(0, 113, 227, 0.1);
+  --color-success: #34c759;
+  --color-success-soft: #eaf8ef;
+  --color-warning: #ff9f0a;
+  --color-warning-soft: #fff4df;
+  --color-danger: #ff3b30;
+  --color-danger-soft: #fff0ef;
+  --color-surface-muted: rgba(242, 242, 247, 0.82);
+
+  --radius-xs: 10px;
+  --radius-sm: 12px;
+  --radius-md: 20px;
+  --radius-lg: 28px;
+  --radius-pill: 999px;
+
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.05);
+  --shadow-card-hover: 0 10px 30px rgba(0, 0, 0, 0.08);
+  --shadow-sheet: 0 -12px 40px rgba(0, 0, 0, 0.1);
+
+  --space-2xs: 2px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 40px;
+
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-md: 15px;
+  --font-size-lg: 18px;
+  --font-size-xl: 24px;
+  --font-size-2xl: 34px;
+
+  --line-tight: 1.18;
+  --line-normal: 1.45;
+  --line-relaxed: 1.7;
+
+  --duration-fast: 120ms;
+  --duration-normal: 200ms;
+  --duration-slow: 280ms;
+
+  --max-content-width: 480px;
+  --tap-size: 44px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  --van-primary-color: var(--color-primary);
+  --van-success-color: var(--color-success);
+  --van-warning-color: var(--color-warning);
+  --van-danger-color: var(--color-danger);
+  --van-text-color: var(--color-text);
+  --van-text-color-2: var(--color-text-secondary);
+  --van-text-color-3: var(--color-text-tertiary);
+  --van-background: var(--color-bg);
+  --van-background-2: var(--color-card-solid);
+  --van-border-color: var(--color-border);
+  --van-radius-md: var(--radius-md);
+  --van-radius-lg: var(--radius-lg);
+  --van-padding-md: var(--space-md);
+  --van-button-border-radius: var(--radius-pill);
+  --van-button-default-height: var(--tap-size);
+  --van-button-small-height: var(--tap-size);
+  --van-field-input-text-color: var(--color-text);
+  --van-cell-font-size: var(--font-size-md);
+  --van-search-background: transparent;
+  --van-search-content-background: var(--color-card-solid);
+  --van-popup-round-radius: var(--radius-lg);
+}
