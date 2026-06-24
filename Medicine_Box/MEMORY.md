@@ -18,8 +18,10 @@
 - UI 主题变量集中在 `src/styles/theme.css`，全局入口保留 `src/styles.css`；视觉规范通过 CSS Variables 管理，组件内只保留布局样式。
 - H5 主内容最大宽度控制为 480px，优先适配手机端，并通过 safe-area 变量保护底部操作区域。
 - 首页分类模块默认折叠，点击分类头后展开；搜索药品时自动展开匹配分类，避免搜索结果被隐藏。
-- 默认分类清单为 9 类：发烧止痛、感冒、咳嗽、胃肠道、高血压、皮肤、过敏、眼科、其他。
+- 默认分类清单为 11 类：发烧止痛、感冒、咳嗽、胃肠道、高血压、高尿酸、高血脂、皮肤、过敏、眼科、其他。
 - 首页分类横幅采用 AI 生成底图 + 本地叠加中文标题，再统一压缩为 webp，避免生成模型中文乱码并控制首页加载体积。
+- 首页分类横幅左侧标题区应保持原有样式：不规则撕碎纸片色块作为底，叠加白色半透明圆角模块，中文标题和“药箱”胶囊放在模块内。
+- 高尿酸分类横幅避免使用脚/脚趾作为患处图案；用户反馈脚部图案容易引发不适，后续应改用手指、肘部、膝关节等更克制的患处表达。
 - Medicine 数据结构长期只保留 `updatedAt`，不再使用 `createdAt`；云函数新增药品不写 `createdAt`，编辑或库存调整时会清理旧文档中的 `createdAt`。
 - Medicine 库存采用批次模型：`batches` 保存每批 `expiryDate + quantity`，`quantity` 是批次数量合计，`expiryDate` 是最近一批有效期，用于列表、状态和旧数据兼容。
 - 库存增加可走 `addBatch` 录入明确有效期和数量；`adjustQuantity` 支持 `-1` 和 `1`，并优先调整最近过期批次。若 `+1` 时没有批次，则用当前 `expiryDate` 创建一批。
@@ -60,6 +62,9 @@
 - 2026-06-23: Added recycle bin soft-delete flow. `delete` now writes `deletedAt`/`updatedAt`, `list` hides deleted medicines, `listDeleted` returns deleted items by newest deletion, `restore` removes `deletedAt`, and `permanentDelete` is the only path that removes a document. Frontend adds a lightweight recycle bin sheet with restore/permanent delete actions. `node -c cloudfunctions/medicineApi/index.js` and `npm run build` passed.
 - 2026-06-23: Added same-name medicine merge behavior. New medicines are matched by `name.trim().toLowerCase()` against non-deleted medicines; the frontend asks whether to join inventory, and the cloud function `add` also falls back to appending a batch instead of creating a duplicate document. Existing batch/FIFO behavior is unchanged. `node -c cloudfunctions/medicineApi/index.js` and `npm run build` passed.
 - 2026-06-23: Fixed same-name merge metadata and form reset. When merging into an existing medicine, `imageUrl`, `location`, and `note` are supplemented only if the existing field is empty; existing values are never overwritten. New/edit form instances are remounted on open so create form state does not retain the previous medicine, while edit still backfills correctly. `node -c cloudfunctions/medicineApi/index.js` and `npm run build` passed.
+- 2026-06-24: Completed P0 data consistency convergence. Batch normalization now merges identical `expiryDate` batches and keeps FIFO ordering, `MedicineBatch.createdAt` is required in the frontend type and auto-filled for legacy data, mock/cloud add/addBatch/adjustQuantity paths share the same normalization behavior, update rejects renaming to an existing non-deleted medicine name, and the duplicate-name prompt text was aligned to “已存在同名药品，是否加入库存？”. `node -c cloudfunctions/medicineApi/index.js` and `npm run build` passed.
+- 2026-06-24: Upgraded create flow to no-dialog same-name recognition. `MedicineForm` can query `medicineApi.findByName` while typing in create mode, auto-prefill image/location/note/category/unit from an existing non-deleted medicine, lock the name field, and submit the matched medicine to `App.vue`. Save now updates allowed master fields and always calls `addBatch`; the previous “加入库存” confirmation dialog was removed. Cloud function added `findByName`. `node -c cloudfunctions/medicineApi/index.js` and `npm run build` passed.
+- 2026-06-24: Added `高尿酸` and `高血脂` default categories with matching webp banners under `src/assets/categories`; titles are rendered locally over AI-generated no-text backgrounds to preserve Chinese text accuracy.
 
 ## Pending Confirmations
 - CloudBase 控制台登录授权需要开启「匿名登录」，否则 `auth.signInAnonymously()` 会返回「登录方式未开启」。

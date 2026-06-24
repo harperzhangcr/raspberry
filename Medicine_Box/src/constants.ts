@@ -4,6 +4,8 @@ export const DEFAULT_CATEGORIES = [
   '咳嗽',
   '胃肠道',
   '高血压',
+  '高尿酸',
+  '高血脂',
   '皮肤',
   '过敏',
   '眼科',

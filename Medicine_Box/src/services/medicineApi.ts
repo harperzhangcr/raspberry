@@ -106,6 +106,20 @@ export const medicineApi = {
     return medicines.map(syncMedicineFromBatches);
   },
 
+  async findByName(familyCode: string, name: string) {
+    const normalizedName = normalizeMedicineName(name);
+    if (!normalizedName) return null;
+    if (DATA_MODE === 'mock') {
+      localMedicines = localMedicines.map(syncMedicineFromBatches);
+      const medicine = localMedicines.find(
+        (item) => !isDeletedMedicine(item) && normalizeMedicineName(item.name) === normalizedName,
+      );
+      return mockDelay(medicine || null);
+    }
+    const medicine = await callMedicineApi<Medicine | null>('findByName', { familyCode, name });
+    return medicine ? syncMedicineFromBatches(medicine) : null;
+  },
+
   async add(familyCode: string, medicine: MedicineInput) {
     if (DATA_MODE === 'mock') {
       const now = Date.now();
@@ -143,6 +157,16 @@ export const medicineApi = {
 
   async update(familyCode: string, medicine: MedicineUpdate) {
     if (DATA_MODE === 'mock') {
+      const duplicate = medicine.name
+        ? localMedicines.find(
+            (item) =>
+              item._id !== medicine._id &&
+              !isDeletedMedicine(item) &&
+              normalizeMedicineName(item.name) === normalizeMedicineName(medicine.name || ''),
+          )
+        : undefined;
+      if (duplicate) throw new Error('已存在同名药品，不能重复创建');
+
       let updated: Medicine | undefined;
       localMedicines = localMedicines.map((item) => {
         if (item._id !== medicine._id) return item;
@@ -196,15 +220,18 @@ export const medicineApi = {
     return callMedicineApi<boolean>('permanentDelete', { familyCode, id });
   },
 
-  async adjustQuantity(familyCode: string, id: string, delta: -1) {
+  async adjustQuantity(familyCode: string, id: string, delta: -1 | 1) {
     if (DATA_MODE === 'mock') {
       let updated: Medicine | undefined;
       localMedicines = localMedicines.map((item) => {
         if (item._id !== id) return item;
         const normalized = syncMedicineFromBatches(item);
         const batches = sortBatches(normalized.batches);
-        if (batches.length === 0) throw new Error('库存已为 0');
-        batches[0] = { ...batches[0], quantity: Math.max(0, batches[0].quantity - 1) };
+        if (batches.length === 0) {
+          if (delta === -1) throw new Error('库存已为 0');
+          batches.push(createBatch(normalized.expiryDate, 0));
+        }
+        batches[0] = { ...batches[0], quantity: Math.max(0, batches[0].quantity + delta) };
         updated = {
           ...normalized,
           batches: sortBatches(batches),

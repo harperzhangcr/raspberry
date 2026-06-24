@@ -128,6 +128,7 @@
         :key="formKey"
         :medicine="editingMedicine"
         :categories="categories"
+        :find-medicine-by-name="findMedicineForForm"
         @cancel="showForm = false"
         @submit="handleSubmitMedicine"
       />
@@ -344,15 +345,6 @@ const statusOptions = [
   { text: '30天内过期', value: 'expiringSoon' },
 ];
 
-function normalizeMedicineName(name: string) {
-  return name.trim().toLowerCase();
-}
-
-function findDuplicateMedicine(name: string) {
-  const normalizedName = normalizeMedicineName(name);
-  return medicines.value.find((item) => normalizeMedicineName(item.name) === normalizedName);
-}
-
 function isDialogCancel(error: unknown) {
   return error === 'cancel' || error === 'overlay';
 }
@@ -452,34 +444,35 @@ function openBatchForm(medicine: Medicine) {
   showBatchForm.value = true;
 }
 
-async function handleSubmitMedicine(payload: MedicineInput) {
+async function findMedicineForForm(name: string) {
+  return medicineApi.findByName(familyCode.value, name);
+}
+
+async function handleSubmitMedicine(payload: MedicineInput, matchedMedicine: Medicine | null) {
   try {
     if (editingMedicine.value) {
       await medicineApi.update(familyCode.value, { ...payload, _id: editingMedicine.value._id });
       showSuccessToast('已更新药品');
-    } else {
-      const duplicateMedicine = findDuplicateMedicine(payload.name);
-      if (duplicateMedicine) {
-        if (payload.quantity <= 0) {
-          showFailToast('同名药品已存在，本次数量需大于 0 才能加入库存');
-          return;
-        }
-        await showConfirmDialog({
-          title: '发现已存在同名药品',
-          message: `${duplicateMedicine.name}\n\n是否将本次库存加入现有药品？`,
-          confirmButtonText: '加入库存',
-          cancelButtonText: '取消',
-        });
-        await medicineApi.add(familyCode.value, payload);
-        showSuccessToast('已加入库存');
-        showForm.value = false;
-        formKey.value += 1;
-        await loadMedicines();
-        if (!expandedCategories.value.includes(duplicateMedicine.category)) {
-          expandedCategories.value = [...expandedCategories.value, duplicateMedicine.category];
-        }
+    } else if (matchedMedicine) {
+      if (payload.quantity <= 0) {
+        showFailToast('本次数量必须大于 0');
         return;
       }
+      await medicineApi.update(familyCode.value, {
+        _id: matchedMedicine._id,
+        category: payload.category,
+        unit: payload.unit,
+        note: payload.note,
+        location: payload.location,
+        imageUrl: payload.imageUrl,
+      });
+      await medicineApi.addBatch(familyCode.value, matchedMedicine._id, {
+        expiryDate: payload.expiryDate,
+        quantity: payload.quantity,
+        createdAt: Date.now(),
+      });
+      showSuccessToast('已加入库存');
+    } else {
       await medicineApi.add(familyCode.value, payload);
       showSuccessToast('已新增药品');
     }

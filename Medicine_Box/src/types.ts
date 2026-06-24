@@ -2,7 +2,7 @@ export interface MedicineBatch {
   id: string;
   expiryDate: string;
   quantity: number;
-  createdAt?: number;
+  createdAt: number;
 }
 
 export interface Medicine {

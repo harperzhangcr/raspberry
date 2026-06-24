@@ -21,6 +21,31 @@ export function sortBatches(batches: MedicineBatch[]) {
     .sort((a, b) => a.expiryDate.localeCompare(b.expiryDate));
 }
 
+export function mergeBatchesByExpiryDate(batches: MedicineBatch[]) {
+  const merged = new Map<string, MedicineBatch>();
+
+  batches
+    .filter((batch) => batch.quantity > 0)
+    .forEach((batch) => {
+      const normalizedBatch = {
+        ...batch,
+        createdAt: batch.createdAt || Date.now(),
+      };
+      const existing = merged.get(batch.expiryDate);
+      if (!existing) {
+        merged.set(batch.expiryDate, normalizedBatch);
+        return;
+      }
+      merged.set(batch.expiryDate, {
+        ...existing,
+        quantity: existing.quantity + normalizedBatch.quantity,
+        createdAt: Math.min(existing.createdAt, normalizedBatch.createdAt),
+      });
+    });
+
+  return sortBatches(Array.from(merged.values()));
+}
+
 export function normalizeMedicineBatches(medicine: Medicine): Medicine {
   const sourceBatches =
     Array.isArray(medicine.batches) && medicine.batches.length > 0
@@ -35,7 +60,7 @@ export function normalizeMedicineBatches(medicine: Medicine): Medicine {
             },
           ]
         : [];
-  const batches = sortBatches(sourceBatches);
+  const batches = mergeBatchesByExpiryDate(sourceBatches);
   const quantity = batches.reduce((sum, batch) => sum + batch.quantity, 0);
   return {
     ...medicine,

@@ -15,6 +15,7 @@
           name="name"
           label="药名"
           placeholder="例如：布洛芬"
+          :readonly="isNameLocked"
           :rules="[{ required: true, message: '请输入药名' }]"
         />
         <van-field
@@ -119,15 +120,17 @@ import { todayDateString } from '../utils/medicine';
 const props = defineProps<{
   medicine: Medicine | null;
   categories: string[];
+  findMedicineByName?: (name: string) => Promise<Medicine | null>;
 }>();
 
 const emit = defineEmits<{
   cancel: [];
-  submit: [payload: MedicineInput];
+  submit: [payload: MedicineInput, matchedMedicine: Medicine | null];
 }>();
 
 const showCategoryPicker = ref(false);
 const imageFileList = ref<UploaderFileListItem[]>([]);
+const matchedMedicine = ref<Medicine | null>(null);
 const form = reactive<MedicineInput>({
   name: '',
   category: '',
@@ -140,7 +143,10 @@ const form = reactive<MedicineInput>({
 });
 
 const categoryColumns = computed(() => props.categories.map((category) => ({ text: category, value: category })));
+const isNameLocked = computed(() => !props.medicine && !!matchedMedicine.value);
 let imagePreviewRequestId = 0;
+let nameLookupRequestId = 0;
+let nameLookupTimer: number | undefined;
 
 async function syncImagePreview(imageUrl?: string) {
   const requestId = ++imagePreviewRequestId;
@@ -163,9 +169,10 @@ async function syncImagePreview(imageUrl?: string) {
 watch(
   () => props.medicine,
   (medicine) => {
+    matchedMedicine.value = null;
     form.name = medicine?.name || '';
     form.category = medicine?.category || props.categories[0] || '';
-    form.quantity = medicine?.quantity ?? 1;
+    form.quantity = medicine ? medicine.quantity : 1;
     form.unit = medicine?.unit || '盒';
     form.expiryDate = medicine?.expiryDate || todayDateString();
     form.note = medicine?.note || '';
@@ -175,6 +182,45 @@ watch(
   },
   { immediate: true },
 );
+
+watch(
+  () => form.name,
+  (name) => {
+    if (props.medicine || matchedMedicine.value) return;
+    if (nameLookupTimer) {
+      window.clearTimeout(nameLookupTimer);
+    }
+    nameLookupTimer = window.setTimeout(() => {
+      void lookupExistingMedicine(name);
+    }, 260);
+  },
+);
+
+async function lookupExistingMedicine(name: string) {
+  const trimmedName = name.trim();
+  const requestId = ++nameLookupRequestId;
+  if (!trimmedName || !props.findMedicineByName) {
+    matchedMedicine.value = null;
+    return;
+  }
+
+  try {
+    const existing = await props.findMedicineByName(trimmedName);
+    if (requestId !== nameLookupRequestId || !existing) return;
+    matchedMedicine.value = existing;
+    form.name = existing.name;
+    form.category = existing.category;
+    form.unit = existing.unit;
+    form.note = existing.note || '';
+    form.location = existing.location || '';
+    form.imageUrl = existing.imageUrl || '';
+    void syncImagePreview(existing.imageUrl);
+  } catch {
+    if (requestId === nameLookupRequestId) {
+      showFailToast('同名药品查询失败');
+    }
+  }
+}
 
 function onCategoryConfirm(event: { selectedOptions: Array<{ text: string; value: string }> }) {
   form.category = event.selectedOptions[0]?.value || '';
@@ -222,7 +268,7 @@ function submit() {
     note: form.note?.trim(),
     location: form.location?.trim(),
     imageUrl: form.imageUrl?.trim(),
-  });
+  }, matchedMedicine.value);
 }
 </script>
 

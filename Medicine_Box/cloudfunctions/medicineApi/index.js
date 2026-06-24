@@ -79,15 +79,28 @@ function normalizeBatches(batches, fallbackExpiryDate, fallbackQuantity) {
     : Number(fallbackQuantity) > 0
       ? [createBatch(fallbackExpiryDate, Number(fallbackQuantity))]
       : [];
-  return source
+  const normalized = source
     .map((batch) => ({
       id: String(batch.id || `batch-${Date.now()}-${Math.random().toString(16).slice(2)}`),
       expiryDate: String(batch.expiryDate || fallbackExpiryDate),
       quantity: Number(batch.quantity || 0),
-      ...(batch.createdAt ? { createdAt: Number(batch.createdAt) } : {}),
+      createdAt: Number(batch.createdAt || Date.now()),
     }))
-    .filter((batch) => batch.quantity > 0 && /^\d{4}-\d{2}-\d{2}$/.test(batch.expiryDate))
-    .sort((a, b) => a.expiryDate.localeCompare(b.expiryDate));
+    .filter((batch) => batch.quantity > 0 && /^\d{4}-\d{2}-\d{2}$/.test(batch.expiryDate));
+  const merged = normalized.reduce((result, batch) => {
+    const existing = result.get(batch.expiryDate);
+    if (!existing) {
+      result.set(batch.expiryDate, batch);
+      return result;
+    }
+    result.set(batch.expiryDate, {
+      ...existing,
+      quantity: existing.quantity + batch.quantity,
+      createdAt: Math.min(existing.createdAt, batch.createdAt),
+    });
+    return result;
+  }, new Map());
+  return Array.from(merged.values()).sort((a, b) => a.expiryDate.localeCompare(b.expiryDate));
 }
 
 function syncMedicineFromBatches(item) {
@@ -161,11 +174,11 @@ async function listMedicines() {
     .map(stripCreatedAt);
 }
 
-async function findExistingMedicineByName(name) {
+async function findExistingMedicineByName(name, excludedId) {
   const normalizedName = normalizeMedicineName(name);
   const result = await collection.get();
   return (result.data || []).find(
-    (item) => !isDeletedMedicine(item) && normalizeMedicineName(item.name) === normalizedName,
+    (item) => item._id !== excludedId && !isDeletedMedicine(item) && normalizeMedicineName(item.name) === normalizedName,
   );
 }
 
@@ -224,6 +237,13 @@ exports.main = async (event) => {
       return ok(await listDeletedMedicines());
     }
 
+    if (action === 'findByName') {
+      const name = String(event.name || '').trim();
+      if (!name) return ok(null);
+      const medicine = await findExistingMedicineByName(name);
+      return ok(medicine ? stripCreatedAt(medicine) : null);
+    }
+
     if (action === 'add') {
       const now = Date.now();
       const medicine = {
@@ -251,6 +271,10 @@ exports.main = async (event) => {
       const medicine = event.medicine || {};
       if (!medicine._id) throw new Error('缺少药品 ID');
       const patch = normalizeMedicinePatch(medicine);
+      if (Object.prototype.hasOwnProperty.call(patch, 'name')) {
+        const duplicate = await findExistingMedicineByName(patch.name, medicine._id);
+        if (duplicate) throw new Error('已存在同名药品，不能重复创建');
+      }
       const batchPatch = Object.prototype.hasOwnProperty.call(patch, 'quantity') || Object.prototype.hasOwnProperty.call(patch, 'expiryDate')
         ? syncMedicineFromBatches({
             batches: normalizeBatches([], patch.expiryDate || medicine.expiryDate, patch.quantity || 0),

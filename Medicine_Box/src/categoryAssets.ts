@@ -4,6 +4,8 @@ const CATEGORY_ASSETS: Record<string, string> = {
   咳嗽: new URL('./assets/categories/cough.webp', import.meta.url).href,
   胃肠道: new URL('./assets/categories/gastrointestinal.webp', import.meta.url).href,
   高血压: new URL('./assets/categories/hypertension.webp', import.meta.url).href,
+  高尿酸: new URL('./assets/categories/high-uric-acid.webp', import.meta.url).href,
+  高血脂: new URL('./assets/categories/high-lipids.webp', import.meta.url).href,
   皮肤: new URL('./assets/categories/skin.webp', import.meta.url).href,
   皮肤外用: new URL('./assets/categories/skin.webp', import.meta.url).href,
   过敏: new URL('./assets/categories/allergy.webp', import.meta.url).href,
