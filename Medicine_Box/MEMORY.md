@@ -25,6 +25,7 @@
 - Medicine 数据结构长期只保留 `updatedAt`，不再使用 `createdAt`；云函数新增药品不写 `createdAt`，编辑或库存调整时会清理旧文档中的 `createdAt`。
 - Medicine 库存采用批次模型：`batches` 保存每批 `expiryDate + quantity`，`quantity` 是批次数量合计，`expiryDate` 是最近一批有效期，用于列表、状态和旧数据兼容。
 - 库存增加可走 `addBatch` 录入明确有效期和数量；`adjustQuantity` 支持 `-1` 和 `1`，并优先调整最近过期批次。若 `+1` 时没有批次，则用当前 `expiryDate` 创建一批。
+- `npm run deploy` 是半自动发版入口：执行前端 build、检查 `dist` 是否生成，并提示用户手动上传 `dist` 到 CloudBase 静态托管；云函数仍按需手动上传。
 
 ## Resource Paths
 - Project root: `/Users/zhangcongrong/Documents/raspberry/Medicine_Box`
@@ -33,6 +34,7 @@
 - Category assets: `/Users/zhangcongrong/Documents/raspberry/Medicine_Box/src/assets/categories`
 - Category asset mapping: `/Users/zhangcongrong/Documents/raspberry/Medicine_Box/src/categoryAssets.ts`
 - Cloud function: `/Users/zhangcongrong/Documents/raspberry/Medicine_Box/cloudfunctions/medicineApi/index.js`
+- Deploy script: `/Users/chocho/Documents/raspberry/Medicine_Box/scripts/deploy.js`
 - Deployment guide: `/Users/zhangcongrong/Documents/raspberry/Medicine_Box/README.md`
 - Codex proxy env file: `/Users/zhangcongrong/.codex/.env`
 - CloudBase envId: `family-medicine-box-d4bsdb25e54e`
@@ -65,6 +67,7 @@
 - 2026-06-24: Completed P0 data consistency convergence. Batch normalization now merges identical `expiryDate` batches and keeps FIFO ordering, `MedicineBatch.createdAt` is required in the frontend type and auto-filled for legacy data, mock/cloud add/addBatch/adjustQuantity paths share the same normalization behavior, update rejects renaming to an existing non-deleted medicine name, and the duplicate-name prompt text was aligned to “已存在同名药品，是否加入库存？”. `node -c cloudfunctions/medicineApi/index.js` and `npm run build` passed.
 - 2026-06-24: Upgraded create flow to no-dialog same-name recognition. `MedicineForm` can query `medicineApi.findByName` while typing in create mode, auto-prefill image/location/note/category/unit from an existing non-deleted medicine, lock the name field, and submit the matched medicine to `App.vue`. Save now updates allowed master fields and always calls `addBatch`; the previous “加入库存” confirmation dialog was removed. Cloud function added `findByName`. `node -c cloudfunctions/medicineApi/index.js` and `npm run build` passed.
 - 2026-06-24: Added `高尿酸` and `高血脂` default categories with matching webp banners under `src/assets/categories`; titles are rendered locally over AI-generated no-text backgrounds to preserve Chinese text accuracy.
+- 2026-06-24: Added semi-automatic deploy script at `scripts/deploy.js`. Because the project uses `"type": "module"`, the script uses ESM imports instead of CommonJS `require`. `node --check scripts/deploy.js` and `npm run deploy` passed.
 
 ## Pending Confirmations
 - CloudBase 控制台登录授权需要开启「匿名登录」，否则 `auth.signInAnonymously()` 会返回「登录方式未开启」。
