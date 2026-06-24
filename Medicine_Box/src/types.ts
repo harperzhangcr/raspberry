@@ -53,3 +53,9 @@ export interface CategoryGroup {
   hasOutOfStock: boolean;
   hasExpired: boolean;
 }
+
+export interface AiMedicineRecognition {
+  name: string;
+  category: string;
+  indications: string;
+}

@@ -89,6 +89,7 @@
                   @delete="handleDelete"
                   @adjust="handleAdjustQuantity"
                   @add-batch="openBatchForm"
+                  @update-batch="handleUpdateBatch"
                 />
               </div>
             </article>
@@ -98,8 +99,18 @@
         <van-tab title="全部列表" name="list">
           <section class="filters">
             <van-dropdown-menu>
-              <van-dropdown-item v-model="selectedCategory" :options="categoryOptions" />
-              <van-dropdown-item v-model="statusFilter" :options="statusOptions" />
+              <van-dropdown-item
+                v-model="selectedCategory"
+                :options="categoryOptions"
+                @open="lockDropdownScroll"
+                @close="unlockDropdownScroll"
+              />
+              <van-dropdown-item
+                v-model="statusFilter"
+                :options="statusOptions"
+                @open="lockDropdownScroll"
+                @close="unlockDropdownScroll"
+              />
             </van-dropdown-menu>
           </section>
 
@@ -117,6 +128,7 @@
               @delete="handleDelete"
               @adjust="handleAdjustQuantity"
               @add-batch="openBatchForm"
+              @update-batch="handleUpdateBatch"
             />
           </section>
         </van-tab>
@@ -129,6 +141,7 @@
         :medicine="editingMedicine"
         :categories="categories"
         :find-medicine-by-name="findMedicineForForm"
+        :recognize-medicine-image="recognizeMedicineImageForForm"
         @cancel="showForm = false"
         @submit="handleSubmitMedicine"
       />
@@ -264,7 +277,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { showConfirmDialog, showFailToast, showSuccessToast } from 'vant';
 import MedicineCard from './components/MedicineCard.vue';
 import MedicineForm from './components/MedicineForm.vue';
@@ -339,14 +352,28 @@ const categoryOptions = computed(() => [
 ]);
 const statusOptions = [
   { text: '全部状态', value: 'all' },
-  { text: '有库存', value: 'inStock' },
+  { text: '有正常效期库存', value: 'inStock' },
   { text: '缺货', value: 'outOfStock' },
   { text: '已过期', value: 'expired' },
   { text: '30天内过期', value: 'expiringSoon' },
 ];
+let lockedScrollTop = 0;
 
 function isDialogCancel(error: unknown) {
   return error === 'cancel' || error === 'overlay';
+}
+
+function lockDropdownScroll() {
+  lockedScrollTop = window.scrollY || document.documentElement.scrollTop || 0;
+  document.body.style.top = `-${lockedScrollTop}px`;
+  document.body.classList.add('dropdown-scroll-locked');
+}
+
+function unlockDropdownScroll() {
+  if (!document.body.classList.contains('dropdown-scroll-locked')) return;
+  document.body.classList.remove('dropdown-scroll-locked');
+  document.body.style.top = '';
+  window.scrollTo(0, lockedScrollTop);
 }
 
 function isCategoryExpanded(category: string) {
@@ -446,6 +473,10 @@ function openBatchForm(medicine: Medicine) {
 
 async function findMedicineForForm(name: string) {
   return medicineApi.findByName(familyCode.value, name);
+}
+
+async function recognizeMedicineImageForForm(imageUrl: string) {
+  return medicineApi.aiRecognizeMedicine(familyCode.value, imageUrl);
 }
 
 async function handleSubmitMedicine(payload: MedicineInput, matchedMedicine: Medicine | null) {
@@ -555,6 +586,15 @@ async function handleSubmitBatch() {
   }
 }
 
+async function handleUpdateBatch(medicine: Medicine, batchId: string, batch: MedicineBatchInput) {
+  try {
+    await medicineApi.updateBatch(familyCode.value, medicine._id, batchId, batch);
+    await loadMedicines();
+  } catch (error) {
+    showFailToast(error instanceof Error ? error.message : '批次更新失败');
+  }
+}
+
 function addCategory() {
   const value = newCategory.value.trim();
   if (!value) {
@@ -607,6 +647,10 @@ async function confirmRenameCategory() {
 }
 
 onMounted(loadMedicines);
+
+onBeforeUnmount(() => {
+  unlockDropdownScroll();
+});
 
 watch(
   customCategories,

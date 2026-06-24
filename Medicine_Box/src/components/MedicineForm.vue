@@ -113,7 +113,7 @@
 import { computed, reactive, ref, watch } from 'vue';
 import { showFailToast } from 'vant';
 import type { UploaderFileListItem } from 'vant';
-import type { Medicine, MedicineInput } from '../types';
+import type { AiMedicineRecognition, Medicine, MedicineInput } from '../types';
 import { resolveMedicineImageUrl, uploadMedicineImage } from '../services/medicineStorage';
 import { todayDateString } from '../utils/medicine';
 
@@ -121,6 +121,7 @@ const props = defineProps<{
   medicine: Medicine | null;
   categories: string[];
   findMedicineByName?: (name: string) => Promise<Medicine | null>;
+  recognizeMedicineImage?: (imageUrl: string) => Promise<AiMedicineRecognition>;
 }>();
 
 const emit = defineEmits<{
@@ -147,6 +148,7 @@ const isNameLocked = computed(() => !props.medicine && !!matchedMedicine.value);
 let imagePreviewRequestId = 0;
 let nameLookupRequestId = 0;
 let nameLookupTimer: number | undefined;
+let aiRecognitionRequestId = 0;
 
 async function syncImagePreview(imageUrl?: string) {
   const requestId = ++imagePreviewRequestId;
@@ -222,6 +224,41 @@ async function lookupExistingMedicine(name: string) {
   }
 }
 
+function normalizeRecognizedCategory(category: string) {
+  const value = category.trim();
+  if (!value) return '';
+  return props.categories.includes(value) ? value : '其他';
+}
+
+function applyRecognitionResult(result: AiMedicineRecognition) {
+  if (props.medicine || matchedMedicine.value) return;
+  if (result.name.trim()) {
+    form.name = result.name.trim();
+  }
+  const category = normalizeRecognizedCategory(result.category);
+  if (category) {
+    form.category = category;
+  }
+  if (result.indications.trim()) {
+    form.note = result.indications.trim();
+  }
+}
+
+async function recognizeUploadedImage(imageUrl: string) {
+  if (!props.recognizeMedicineImage) return;
+  const requestId = ++aiRecognitionRequestId;
+
+  try {
+    const result = await props.recognizeMedicineImage(imageUrl);
+    if (requestId !== aiRecognitionRequestId) return;
+    applyRecognitionResult(result);
+  } catch {
+    if (requestId === aiRecognitionRequestId) {
+      showFailToast('AI识别失败，可手动填写');
+    }
+  }
+}
+
 function onCategoryConfirm(event: { selectedOptions: Array<{ text: string; value: string }> }) {
   form.category = event.selectedOptions[0]?.value || '';
   showCategoryPicker.value = false;
@@ -245,6 +282,7 @@ async function handleImageRead(item: UploaderFileListItem | UploaderFileListItem
         status: 'done',
       },
     ];
+    void recognizeUploadedImage(imageUrl);
   } catch {
     fileItem.status = 'failed';
     fileItem.message = '上传失败';
@@ -253,6 +291,7 @@ async function handleImageRead(item: UploaderFileListItem | UploaderFileListItem
 }
 
 function handleImageDelete() {
+  aiRecognitionRequestId += 1;
   form.imageUrl = '';
   imageFileList.value = [];
   return true;

@@ -25,7 +25,11 @@
 - Medicine 数据结构长期只保留 `updatedAt`，不再使用 `createdAt`；云函数新增药品不写 `createdAt`，编辑或库存调整时会清理旧文档中的 `createdAt`。
 - Medicine 库存采用批次模型：`batches` 保存每批 `expiryDate + quantity`，`quantity` 是批次数量合计，`expiryDate` 是最近一批有效期，用于列表、状态和旧数据兼容。
 - 库存增加可走 `addBatch` 录入明确有效期和数量；`adjustQuantity` 支持 `-1` 和 `1`，并优先调整最近过期批次。若 `+1` 时没有批次，则用当前 `expiryDate` 创建一批。
-- `npm run deploy` 是半自动发版入口：执行前端 build、检查 `dist` 是否生成，并提示用户手动上传 `dist` 到 CloudBase 静态托管；云函数仍按需手动上传。
+- 状态筛选语义中，`有正常效期库存` 代表库存数量大于 0 且未过期；30 天内过期仍属于正常效期库存，已过期即使仍有数量也不属于该筛选。该状态只作为筛选项，不作为药品卡片标签展示。
+- 批次编辑采用卡片内 inline 编辑：点击批次行后直接编辑 `expiryDate` 和 `quantity`，失焦或回车自动保存；不新增弹窗和单独编辑按钮。
+- 药品图片 AI 识别统一走 CloudBase 云函数 `medicineApi` 的 `aiRecognizeMedicine` action；前端只传 CloudBase fileID/URL，不持有或调用 AI API Key。阿里百炼 API Key 必须配置在云函数环境变量 `ALI_API_KEY`。
+- `npm run deploy` 是半自动发版入口：自动递增 package patch 版本、执行前端 build、生成 `dist/version.txt` 和 `dist/version.json`、保存 `dist-versions/vX.X.X/` 快照，并提示用户手动上传 `dist` 到 CloudBase 静态托管；云函数仍按需手动上传。
+- rollback 通过手动上传 `dist-versions/vX.X.X/` 的历史静态文件到 CloudBase 静态托管完成，不影响 CloudBase 数据库。
 
 ## Resource Paths
 - Project root: `/Users/zhangcongrong/Documents/raspberry/Medicine_Box`
@@ -34,7 +38,9 @@
 - Category assets: `/Users/zhangcongrong/Documents/raspberry/Medicine_Box/src/assets/categories`
 - Category asset mapping: `/Users/zhangcongrong/Documents/raspberry/Medicine_Box/src/categoryAssets.ts`
 - Cloud function: `/Users/zhangcongrong/Documents/raspberry/Medicine_Box/cloudfunctions/medicineApi/index.js`
+- Qwen-VL wrapper: `/Users/chocho/Documents/raspberry/Medicine_Box/cloudfunctions/medicineApi/qwen.js`
 - Deploy script: `/Users/chocho/Documents/raspberry/Medicine_Box/scripts/deploy.js`
+- Rollback guide: `/Users/chocho/Documents/raspberry/Medicine_Box/scripts/ROLLBACK.md`
 - Deployment guide: `/Users/zhangcongrong/Documents/raspberry/Medicine_Box/README.md`
 - Codex proxy env file: `/Users/zhangcongrong/.codex/.env`
 - CloudBase envId: `family-medicine-box-d4bsdb25e54e`
@@ -68,6 +74,11 @@
 - 2026-06-24: Upgraded create flow to no-dialog same-name recognition. `MedicineForm` can query `medicineApi.findByName` while typing in create mode, auto-prefill image/location/note/category/unit from an existing non-deleted medicine, lock the name field, and submit the matched medicine to `App.vue`. Save now updates allowed master fields and always calls `addBatch`; the previous “加入库存” confirmation dialog was removed. Cloud function added `findByName`. `node -c cloudfunctions/medicineApi/index.js` and `npm run build` passed.
 - 2026-06-24: Added `高尿酸` and `高血脂` default categories with matching webp banners under `src/assets/categories`; titles are rendered locally over AI-generated no-text backgrounds to preserve Chinese text accuracy.
 - 2026-06-24: Added semi-automatic deploy script at `scripts/deploy.js`. Because the project uses `"type": "module"`, the script uses ESM imports instead of CommonJS `require`. `node --check scripts/deploy.js` and `npm run deploy` passed.
+- 2026-06-24: Completed P1 UI/interaction fixes. The all-list Vant dropdown now has `60vh` scrollable content, higher overlay/dropdown z-index, and body scroll lock while open. Medicine batch rows now support click-to-edit inline `expiryDate` and `quantity`, auto-saving on blur/Enter through `updateBatch` while preserving the existing batch normalization model. `node -c cloudfunctions/medicineApi/index.js`, `npm run build`, and browser checks at 390px passed.
+- 2026-06-24: Fixed all-list dropdown overlay regression. Scope overlay z-index to `.van-dropdown-item .van-overlay`, force `.van-dropdown-item__content` above it, and avoid adding `position: relative` to the content because it interferes with Vant popup hit testing/positioning. Browser coordinate click confirmed status option selection works; `npm run build` passed.
+- 2026-06-24: Adjusted stock status semantics. The stock filter label is now `有正常效期库存`, and it includes medicines with quantity greater than 0 whose expiry status is not expired, including expiring-soon medicines. Expired medicines are excluded even if quantity remains. This state is not shown as a medicine card tag; risk tags such as `缺货`, `已过期`, and `30天内过期` remain visible. `npm run build` passed.
+- 2026-06-24: Upgraded deploy system to SemVer patch releases and rollback snapshots. `scripts/deploy.js` now reads and increments `package.json` version, builds, writes `version.txt`/`version.json`, archives `dist` to `dist-versions/vX.X.X/`, and prints CloudBase upload plus rollback guidance. Added `scripts/ROLLBACK.md`; `node --check scripts/deploy.js` and `npm run build` passed.
+- 2026-06-24: Added CloudBase-mediated Qwen-VL medicine image recognition. `aiRecognizeMedicine` resolves CloudBase fileIDs to temporary URLs, calls Alibaba Bailian OpenAI-compatible chat completions through `cloudfunctions/medicineApi/qwen.js`, and returns `{ name, category, indications }` or `{ error: true, message: 'AI识别失败' }`. Frontend calls it after image upload and maps `indications` into the existing `note` field without changing the Medicine data model. `node -c cloudfunctions/medicineApi/index.js`, `node -c cloudfunctions/medicineApi/qwen.js`, and `npm run build` passed.
 
 ## Pending Confirmations
 - CloudBase 控制台登录授权需要开启「匿名登录」，否则 `auth.signInAnonymously()` 会返回「登录方式未开启」。

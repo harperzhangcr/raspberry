@@ -38,9 +38,45 @@
     </button>
 
     <div v-if="showBatches && medicine.batches.length > 0" class="medicine-card__batches" @click.stop>
-      <div v-for="batch in sortedBatches" :key="batch.id" class="medicine-card__batch-row">
-        <span>有效期 {{ batch.expiryDate }}</span>
-        <strong>{{ batch.quantity }}{{ medicine.unit }}</strong>
+      <div
+        v-for="batch in sortedBatches"
+        :key="batch.id"
+        class="medicine-card__batch-row"
+        :class="{ 'medicine-card__batch-row--editing': editingBatchId === batch.id }"
+        role="button"
+        tabindex="0"
+        @click="startEditBatch(batch)"
+        @keyup.enter="startEditBatch(batch)"
+        @focusout="handleBatchFocusOut"
+      >
+        <template v-if="editingBatchId === batch.id">
+          <label class="medicine-card__batch-field">
+            <span>有效期</span>
+            <input
+              v-model="batchDraft.expiryDate"
+              class="medicine-card__batch-input"
+              type="date"
+              @click.stop
+              @keyup.enter="commitBatchEdit"
+            />
+          </label>
+          <label class="medicine-card__batch-field">
+            <span>数量</span>
+            <input
+              v-model="batchQuantityDraft"
+              class="medicine-card__batch-input medicine-card__batch-input--quantity"
+              type="number"
+              min="1"
+              inputmode="numeric"
+              @click.stop
+              @keyup.enter="commitBatchEdit"
+            />
+          </label>
+        </template>
+        <template v-else>
+          <span>有效期 {{ batch.expiryDate }}</span>
+          <strong>{{ batch.quantity }}{{ medicine.unit }}</strong>
+        </template>
       </div>
     </div>
 
@@ -64,8 +100,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
-import type { Medicine } from '../types';
+import { computed, nextTick, ref, watch } from 'vue';
+import type { Medicine, MedicineBatch, MedicineBatchInput } from '../types';
 import { resolveMedicineImageUrl } from '../services/medicineStorage';
 import { getMedicineStatus, sortBatches } from '../utils/medicine';
 
@@ -73,19 +109,71 @@ const props = defineProps<{
   medicine: Medicine;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
   detail: [medicine: Medicine];
   edit: [medicine: Medicine];
   delete: [medicine: Medicine];
   adjust: [medicine: Medicine, delta: -1];
   addBatch: [medicine: Medicine];
+  updateBatch: [medicine: Medicine, batchId: string, batch: MedicineBatchInput];
 }>();
 
 const showBatches = ref(false);
 const displayImageUrl = ref('');
+const editingBatchId = ref('');
+const batchDraft = ref<MedicineBatchInput>({
+  expiryDate: '',
+  quantity: 1,
+});
+const batchQuantityDraft = ref('1');
 const status = computed(() => getMedicineStatus(props.medicine));
 const sortedBatches = computed(() => sortBatches(props.medicine.batches));
 let imageRequestId = 0;
+
+function startEditBatch(batch: MedicineBatch) {
+  if (editingBatchId.value === batch.id) return;
+  editingBatchId.value = batch.id;
+  batchDraft.value = {
+    expiryDate: batch.expiryDate,
+    quantity: batch.quantity,
+    createdAt: batch.createdAt,
+  };
+  batchQuantityDraft.value = String(batch.quantity);
+  void nextTick(() => {
+    const input = document.querySelector<HTMLInputElement>(
+      `.medicine-card__batch-row--editing .medicine-card__batch-input`,
+    );
+    input?.focus();
+  });
+}
+
+function commitBatchEdit() {
+  if (!editingBatchId.value) return;
+  const batch = sortedBatches.value.find((item) => item.id === editingBatchId.value);
+  if (!batch) {
+    editingBatchId.value = '';
+    return;
+  }
+
+  const expiryDate = batchDraft.value.expiryDate;
+  const quantity = Math.max(1, Number(batchQuantityDraft.value) || 1);
+  editingBatchId.value = '';
+
+  if (expiryDate === batch.expiryDate && quantity === batch.quantity) return;
+
+  emit('updateBatch', props.medicine, batch.id, {
+    expiryDate,
+    quantity,
+    createdAt: batch.createdAt,
+  });
+}
+
+function handleBatchFocusOut(event: FocusEvent) {
+  const current = event.currentTarget as HTMLElement | null;
+  const next = event.relatedTarget as Node | null;
+  if (current && next && current.contains(next)) return;
+  commitBatchEdit();
+}
 
 watch(
   () => props.medicine.imageUrl,
@@ -278,9 +366,49 @@ watch(
   line-height: var(--line-relaxed);
 }
 
+.medicine-card__batch-row--editing {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(92px, 0.7fr);
+  align-items: end;
+  padding: var(--space-sm);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-card-solid);
+}
+
 .medicine-card__batch-row strong {
   color: var(--color-text);
   font-weight: 700;
+}
+
+.medicine-card__batch-field {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-2xs);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.medicine-card__batch-input {
+  width: 100%;
+  min-width: 0;
+  height: 36px;
+  padding: 0 var(--space-xs);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  background: var(--color-bg);
+  font: inherit;
+}
+
+.medicine-card__batch-input:focus {
+  border-color: var(--color-primary);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-primary-soft);
+}
+
+.medicine-card__batch-input--quantity {
+  text-align: right;
 }
 
 .medicine-card__actions {

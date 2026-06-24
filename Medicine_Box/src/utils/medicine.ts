@@ -87,10 +87,6 @@ export function getMedicineStatus(medicine: Medicine): MedicineStatus {
   } else if (expiryStatus === 'expiringSoon') {
     labels.push({ text: '30天内过期', type: 'warning' });
   }
-  if (labels.length === 0) {
-    labels.push({ text: '正常', type: 'success' });
-  }
-
   return { expiryStatus, isOutOfStock, labels };
 }
 
@@ -115,7 +111,7 @@ export function filterMedicines(
     const matchCategory = category === '全部' || medicine.category === category;
     const matchStatus =
       status === 'all' ||
-      (status === 'inStock' && !itemStatus.isOutOfStock) ||
+      (status === 'inStock' && !itemStatus.isOutOfStock && itemStatus.expiryStatus !== 'expired') ||
       (status === 'outOfStock' && itemStatus.isOutOfStock) ||
       (status === 'expired' && itemStatus.expiryStatus === 'expired') ||
       (status === 'expiringSoon' && itemStatus.expiryStatus === 'expiringSoon');

@@ -1,4 +1,5 @@
 const cloudbase = require('@cloudbase/node-sdk');
+const { recognizeMedicineByImage } = require('./qwen');
 
 const app = cloudbase.init({
   env: cloudbase.SYMBOL_CURRENT_ENV,
@@ -223,6 +224,19 @@ async function listDeletedMedicines() {
     .map(stripCreatedAt);
 }
 
+async function resolveCloudImageUrl(imageUrl) {
+  const value = String(imageUrl || '').trim();
+  if (!value) throw new Error('图片不能为空');
+  if (!value.startsWith('cloud://')) return value;
+
+  const result = await app.getTempFileURL({
+    fileList: [value],
+  });
+  const tempUrl = result.fileList && result.fileList[0] && result.fileList[0].tempFileURL;
+  if (!tempUrl) throw new Error('图片地址无效');
+  return tempUrl;
+}
+
 exports.main = async (event) => {
   try {
     const { action, familyCode } = event || {};
@@ -242,6 +256,19 @@ exports.main = async (event) => {
       if (!name) return ok(null);
       const medicine = await findExistingMedicineByName(name);
       return ok(medicine ? stripCreatedAt(medicine) : null);
+    }
+
+    if (action === 'aiRecognizeMedicine') {
+      try {
+        const imageUrl = await resolveCloudImageUrl(event.imageUrl);
+        return ok(await recognizeMedicineByImage(imageUrl));
+      } catch (error) {
+        console.error('[aiRecognizeMedicine] failed:', error);
+        return ok({
+          error: true,
+          message: 'AI识别失败',
+        });
+      }
     }
 
     if (action === 'add') {
@@ -353,6 +380,41 @@ exports.main = async (event) => {
     if (action === 'addBatch') {
       if (!event.id) throw new Error('缺少药品 ID');
       return ok(await appendBatchToMedicine(event.id, normalizeBatchInput(event.batch)));
+    }
+
+    if (action === 'updateBatch') {
+      if (!event.id) throw new Error('缺少药品 ID');
+      const batchId = String(event.batchId || '').trim();
+      if (!batchId) throw new Error('缺少库存批次 ID');
+      const batchPatch = normalizeBatchInput(event.batch);
+      const current = await collection.doc(event.id).get();
+      const item = current.data && current.data[0];
+      if (!item) throw new Error('未找到药品');
+      const synced = syncMedicineFromBatches(item);
+      const target = synced.batches.find((batch) => batch.id === batchId);
+      if (!target) throw new Error('未找到库存批次');
+      const next = syncMedicineFromBatches({
+        ...synced,
+        batches: synced.batches.map((batch) =>
+          batch.id === batchId
+            ? {
+                ...batch,
+                expiryDate: batchPatch.expiryDate,
+                quantity: batchPatch.quantity,
+                createdAt: batchPatch.createdAt || batch.createdAt,
+              }
+            : batch,
+        ),
+      });
+      const updatedAt = Date.now();
+      await collection.doc(event.id).update({
+        batches: next.batches,
+        quantity: next.quantity,
+        expiryDate: next.expiryDate,
+        updatedAt,
+        createdAt: _.remove(),
+      });
+      return ok(stripCreatedAt({ ...next, updatedAt }));
     }
 
     return fail('未知 action');

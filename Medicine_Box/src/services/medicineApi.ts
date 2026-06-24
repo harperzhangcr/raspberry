@@ -1,6 +1,13 @@
 import { DATA_MODE } from '../constants';
 import { mockMedicines } from './mockData';
-import type { Medicine, MedicineBatch, MedicineBatchInput, MedicineInput, MedicineUpdate } from '../types';
+import type {
+  AiMedicineRecognition,
+  Medicine,
+  MedicineBatch,
+  MedicineBatchInput,
+  MedicineInput,
+  MedicineUpdate,
+} from '../types';
 import { normalizeMedicineBatches, sortBatches } from '../utils/medicine';
 import { ensureCloudAuth, getCloudApp, logCloudBaseError } from './cloudbaseClient';
 
@@ -267,5 +274,57 @@ export const medicineApi = {
       return mockDelay(updated);
     }
     return callMedicineApi<Medicine>('addBatch', { familyCode, id, batch });
+  },
+
+  async updateBatch(familyCode: string, id: string, batchId: string, batch: MedicineBatchInput) {
+    if (DATA_MODE === 'mock') {
+      let updated: Medicine | undefined;
+      localMedicines = localMedicines.map((item) => {
+        if (item._id !== id) return item;
+        const normalized = syncMedicineFromBatches(item);
+        const target = normalized.batches.find((source) => source.id === batchId);
+        if (!target) return item;
+        updated = syncMedicineFromBatches({
+          ...normalized,
+          batches: normalized.batches.map((source) =>
+            source.id === batchId
+              ? {
+                  ...source,
+                  expiryDate: batch.expiryDate,
+                  quantity: Math.max(1, Number(batch.quantity) || 1),
+                  createdAt: batch.createdAt || source.createdAt,
+                }
+              : source,
+          ),
+          updatedAt: Date.now(),
+        });
+        return updated;
+      });
+      if (!updated) throw new Error('未找到库存批次');
+      return mockDelay(updated);
+    }
+    return callMedicineApi<Medicine>('updateBatch', { familyCode, id, batchId, batch });
+  },
+
+  async aiRecognizeMedicine(familyCode: string, imageUrl: string) {
+    if (DATA_MODE === 'mock') {
+      return mockDelay<AiMedicineRecognition>({
+        name: '',
+        category: '',
+        indications: '',
+      });
+    }
+    const result = await callMedicineApi<AiMedicineRecognition & { error?: boolean; message?: string }>(
+      'aiRecognizeMedicine',
+      { familyCode, imageUrl },
+    );
+    if (result.error) {
+      throw new Error(result.message || 'AI识别失败');
+    }
+    return {
+      name: result.name || '',
+      category: result.category || '',
+      indications: result.indications || '',
+    };
   },
 };
