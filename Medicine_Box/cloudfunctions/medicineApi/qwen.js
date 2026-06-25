@@ -23,10 +23,12 @@ function postJson(url, apiKey, payload) {
           data += chunk;
         });
         response.on('end', () => {
+          console.log('[Qwen-VL] raw response:', data);
           let parsed;
           try {
             parsed = JSON.parse(data || '{}');
           } catch (error) {
+            console.error('[Qwen-VL] raw response JSON parse failed:', error.message);
             reject(new Error('Qwen-VL 返回格式异常'));
             return;
           }
@@ -51,15 +53,51 @@ function extractJsonObject(text) {
   const value = String(text || '').trim();
   if (!value) throw new Error('Qwen-VL 返回为空');
 
+  console.log('[Qwen-VL] content before JSON extract:', value);
   const fenced = value.match(/```(?:json)?\s*([\s\S]*?)```/i);
   const jsonText = fenced ? fenced[1].trim() : value;
   const start = jsonText.indexOf('{');
-  const end = jsonText.lastIndexOf('}');
-  if (start === -1 || end === -1 || end <= start) {
-    throw new Error('Qwen-VL 返回格式异常');
+  if (start === -1) {
+    throw new Error('AI识别结果格式异常');
   }
 
-  return JSON.parse(jsonText.slice(start, end + 1));
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let index = start; index < jsonText.length; index += 1) {
+    const char = jsonText[index];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (char === '\\') {
+      escaped = true;
+      continue;
+    }
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+    if (char === '{') depth += 1;
+    if (char === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        const extracted = jsonText.slice(start, index + 1);
+        console.log('[Qwen-VL] extracted JSON text:', extracted);
+        try {
+          const parsed = JSON.parse(extracted);
+          console.log('[Qwen-VL] parsed JSON object:', parsed);
+          return parsed;
+        } catch (error) {
+          console.error('[Qwen-VL] extracted JSON parse failed:', error.message);
+          throw new Error('AI识别结果格式异常');
+        }
+      }
+    }
+  }
+
+  throw new Error('AI识别结果格式异常');
 }
 
 function normalizeRecognitionResult(result) {
@@ -78,6 +116,8 @@ async function recognizeMedicineByImage(imageUrl) {
 
   const endpoint = process.env.ALI_QWEN_ENDPOINT || DEFAULT_QWEN_ENDPOINT;
   const model = process.env.ALI_QWEN_VL_MODEL || DEFAULT_QWEN_MODEL;
+  console.log('[Qwen-VL] request imageUrl prefix:', String(imageUrl || '').slice(0, 80));
+  console.log('[Qwen-VL] request config:', { endpoint, model, hasApiKey: Boolean(apiKey) });
   const response = await postJson(endpoint, apiKey, {
     model,
     temperature: 0.1,
@@ -106,7 +146,11 @@ async function recognizeMedicineByImage(imageUrl) {
   });
 
   const content = response.choices?.[0]?.message?.content;
-  return normalizeRecognitionResult(extractJsonObject(content));
+  console.log('[Qwen-VL] message content:', content);
+  const parsed = extractJsonObject(content);
+  const normalized = normalizeRecognitionResult(parsed);
+  console.log('[Qwen-VL] normalized result:', normalized);
+  return normalized;
 }
 
 module.exports = {

@@ -81,6 +81,7 @@ export function getMedicineStatus(medicine: Medicine): MedicineStatus {
 
   if (isOutOfStock) {
     labels.push({ text: '缺货', type: 'danger' });
+    return { expiryStatus, isOutOfStock, labels };
   }
   if (expiryStatus === 'expired') {
     labels.push({ text: '已过期', type: 'danger' });

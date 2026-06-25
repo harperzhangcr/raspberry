@@ -1,14 +1,25 @@
 <template>
   <article class="medicine-card" @click="$emit('detail', medicine)">
-    <div class="medicine-card__main" :class="{ 'medicine-card__main--with-photo': displayImageUrl }">
-      <div v-if="displayImageUrl" class="medicine-card__photo">
-        <img :src="displayImageUrl" :alt="medicine.name" loading="lazy" />
+    <div class="medicine-card__main" :class="{ 'medicine-card__main--with-photo': hasImageSlot }">
+      <div v-if="hasImageSlot" class="medicine-card__photo">
+        <img
+          v-if="displayImageUrl"
+          :src="displayImageUrl"
+          :alt="medicine.name"
+          loading="lazy"
+          @load="handleImageLoad"
+          @error="handleImageError"
+        />
+        <div v-else class="medicine-card__photo-placeholder" aria-hidden="true">
+          <van-icon name="photo-o" />
+        </div>
       </div>
       <div class="medicine-card__content">
         <div class="medicine-card__top">
           <div class="medicine-card__title">
             <h3>{{ medicine.name }}</h3>
-            <p>{{ medicine.category }} · 有效期 {{ medicine.expiryDate }}</p>
+            <p>{{ medicine.category }}</p>
+            <p>有效期 {{ medicine.expiryDate }}</p>
           </div>
           <div class="medicine-card__stock" aria-label="当前库存">
             <strong>{{ medicine.quantity }}</strong>
@@ -76,6 +87,14 @@
         <template v-else>
           <span>有效期 {{ batch.expiryDate }}</span>
           <strong>{{ batch.quantity }}{{ medicine.unit }}</strong>
+          <button
+            class="medicine-card__batch-delete"
+            type="button"
+            aria-label="删除库存批次"
+            @click.stop="$emit('deleteBatch', medicine, batch.id)"
+          >
+            <van-icon name="delete-o" />
+          </button>
         </template>
       </div>
     </div>
@@ -116,6 +135,7 @@ const emit = defineEmits<{
   adjust: [medicine: Medicine, delta: -1];
   addBatch: [medicine: Medicine];
   updateBatch: [medicine: Medicine, batchId: string, batch: MedicineBatchInput];
+  deleteBatch: [medicine: Medicine, batchId: string];
 }>();
 
 const showBatches = ref(false);
@@ -128,7 +148,12 @@ const batchDraft = ref<MedicineBatchInput>({
 const batchQuantityDraft = ref('1');
 const status = computed(() => getMedicineStatus(props.medicine));
 const sortedBatches = computed(() => sortBatches(props.medicine.batches));
+const hasImageSlot = computed(() => Boolean(String(props.medicine.imageUrl || '').trim()));
 let imageRequestId = 0;
+
+function getImagePrefix(value?: string) {
+  return String(value || '').trim().slice(0, 80);
+}
 
 function startEditBatch(batch: MedicineBatch) {
   if (editingBatchId.value === batch.id) return;
@@ -175,13 +200,36 @@ function handleBatchFocusOut(event: FocusEvent) {
   commitBatchEdit();
 }
 
+function handleImageLoad() {
+  console.log('[MedicineCard] img load:', {
+    medicineId: props.medicine._id,
+    srcPrefix: getImagePrefix(displayImageUrl.value),
+  });
+}
+
+function handleImageError() {
+  console.warn('[MedicineCard] img error, fallback to placeholder:', {
+    medicineId: props.medicine._id,
+    srcPrefix: getImagePrefix(displayImageUrl.value),
+  });
+  displayImageUrl.value = '';
+}
+
 watch(
   () => props.medicine.imageUrl,
   async (imageUrl) => {
     const requestId = ++imageRequestId;
     displayImageUrl.value = '';
+    console.log('[MedicineCard] raw imageUrl prefix:', {
+      medicineId: props.medicine._id,
+      prefix: getImagePrefix(imageUrl),
+    });
     const resolved = await resolveMedicineImageUrl(imageUrl);
     if (requestId === imageRequestId) {
+      console.log('[MedicineCard] resolved tempUrl prefix:', {
+        medicineId: props.medicine._id,
+        prefix: getImagePrefix(resolved),
+      });
       displayImageUrl.value = resolved;
     }
   },
@@ -234,6 +282,15 @@ watch(
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.medicine-card__photo-placeholder {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  color: var(--color-text-secondary);
+  font-size: 28px;
 }
 
 .medicine-card__content {
@@ -352,11 +409,11 @@ watch(
 }
 
 .medicine-card__batch-row {
-  display: flex;
+  display: grid;
   min-height: 38px;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-md);
+  gap: var(--space-sm);
   padding: 0 var(--space-sm);
   border-radius: var(--radius-sm);
   color: var(--color-text-secondary);
@@ -378,6 +435,19 @@ watch(
 .medicine-card__batch-row strong {
   color: var(--color-text);
   font-weight: 700;
+}
+
+.medicine-card__batch-delete {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: var(--color-text-secondary);
+  background: transparent;
+  font-size: 16px;
 }
 
 .medicine-card__batch-field {

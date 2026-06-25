@@ -53,6 +53,8 @@ function normalizeMedicine(input) {
     note: String(input.note || '').trim(),
     location: String(input.location || '').trim(),
     imageUrl: String(input.imageUrl || '').trim(),
+    dosageTiming: String(input.dosageTiming || '不限').trim() || '不限',
+    dosageCycle: String(input.dosageCycle || '').trim(),
   });
 }
 
@@ -151,6 +153,12 @@ function normalizeMedicinePatch(input) {
   if (Object.prototype.hasOwnProperty.call(input, 'imageUrl')) {
     patch.imageUrl = String(input.imageUrl || '').trim();
   }
+  if (Object.prototype.hasOwnProperty.call(input, 'dosageTiming')) {
+    patch.dosageTiming = String(input.dosageTiming || '不限').trim() || '不限';
+  }
+  if (Object.prototype.hasOwnProperty.call(input, 'dosageCycle')) {
+    patch.dosageCycle = String(input.dosageCycle || '').trim();
+  }
   return patch;
 }
 
@@ -194,6 +202,12 @@ function getEmptyFieldSupplements(existing, incoming) {
   if (!String(existing.note || '').trim() && String(incoming && incoming.note || '').trim()) {
     supplement.note = String(incoming.note).trim();
   }
+  if (!String(existing.dosageTiming || '').trim() && String(incoming && incoming.dosageTiming || '').trim()) {
+    supplement.dosageTiming = String(incoming.dosageTiming).trim();
+  }
+  if (!String(existing.dosageCycle || '').trim() && String(incoming && incoming.dosageCycle || '').trim()) {
+    supplement.dosageCycle = String(incoming.dosageCycle).trim();
+  }
   return supplement;
 }
 
@@ -226,11 +240,26 @@ async function listDeletedMedicines() {
 
 async function resolveCloudImageUrl(imageUrl) {
   const value = String(imageUrl || '').trim();
+  console.log('[aiRecognizeMedicine] resolve imageUrl exists:', Boolean(value));
+  console.log('[aiRecognizeMedicine] resolve imageUrl type/prefix:', {
+    type: typeof imageUrl,
+    prefix: value.slice(0, 16),
+  });
   if (!value) throw new Error('图片不能为空');
-  if (!value.startsWith('cloud://')) return value;
+  if (!value.startsWith('cloud://')) {
+    console.log('[aiRecognizeMedicine] getTempFileURL skipped: non-cloud URL');
+    return value;
+  }
 
+  console.log('[aiRecognizeMedicine] getTempFileURL start');
   const result = await app.getTempFileURL({
     fileList: [value],
+  });
+  console.log('[aiRecognizeMedicine] getTempFileURL result:', {
+    hasFileList: Array.isArray(result.fileList),
+    firstStatus: result.fileList && result.fileList[0] && result.fileList[0].status,
+    firstCode: result.fileList && result.fileList[0] && result.fileList[0].code,
+    firstMessage: result.fileList && result.fileList[0] && result.fileList[0].message,
   });
   const tempUrl = result.fileList && result.fileList[0] && result.fileList[0].tempFileURL;
   if (!tempUrl) throw new Error('图片地址无效');
@@ -260,13 +289,21 @@ exports.main = async (event) => {
 
     if (action === 'aiRecognizeMedicine') {
       try {
+        console.log('[aiRecognizeMedicine] action entered');
+        console.log('[aiRecognizeMedicine] received imageUrl:', {
+          exists: Boolean(event.imageUrl),
+          type: typeof event.imageUrl,
+          prefix: String(event.imageUrl || '').slice(0, 16),
+        });
         const imageUrl = await resolveCloudImageUrl(event.imageUrl);
+        console.log('[aiRecognizeMedicine] image URL for Qwen prefix:', imageUrl.slice(0, 80));
         return ok(await recognizeMedicineByImage(imageUrl));
       } catch (error) {
-        console.error('[aiRecognizeMedicine] failed:', error);
+        console.error('[aiRecognizeMedicine] failed message:', error.message);
+        console.error('[aiRecognizeMedicine] failed stack:', error.stack);
         return ok({
           error: true,
-          message: 'AI识别失败',
+          message: error.message === 'AI识别结果格式异常' ? 'AI识别结果格式异常' : 'AI识别失败',
         });
       }
     }
@@ -405,6 +442,34 @@ exports.main = async (event) => {
               }
             : batch,
         ),
+      });
+      const updatedAt = Date.now();
+      await collection.doc(event.id).update({
+        batches: next.batches,
+        quantity: next.quantity,
+        expiryDate: next.expiryDate,
+        updatedAt,
+        createdAt: _.remove(),
+      });
+      return ok(stripCreatedAt({ ...next, updatedAt }));
+    }
+
+    if (action === 'deleteBatch') {
+      if (!event.id) throw new Error('缺少药品 ID');
+      const batchId = String(event.batchId || '').trim();
+      if (!batchId) throw new Error('缺少库存批次 ID');
+      const current = await collection.doc(event.id).get();
+      const item = current.data && current.data[0];
+      if (!item) throw new Error('未找到药品');
+      const synced = syncMedicineFromBatches(item);
+      const nextBatches = synced.batches.filter((batch) => batch.id !== batchId);
+      if (nextBatches.length === synced.batches.length) throw new Error('未找到库存批次');
+      const nextQuantity = nextBatches.reduce((sum, batch) => sum + batch.quantity, 0);
+      const next = syncMedicineFromBatches({
+        ...synced,
+        batches: nextBatches,
+        quantity: nextQuantity,
+        expiryDate: nextBatches[0] ? nextBatches[0].expiryDate : synced.expiryDate,
       });
       const updatedAt = Date.now();
       await collection.doc(event.id).update({

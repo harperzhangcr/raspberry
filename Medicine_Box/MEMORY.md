@@ -9,6 +9,7 @@
 
 ## Long-Term Decisions
 - 首页采用「分类药箱目录」结构，而不是以过期/缺货报表为首页中心。
+- 首页全局操作区统一承载 `新增药品` 与 `药箱体检`；分类药箱页不再展示 `管理分类` 主入口，全部列表页不再展示分类/状态筛选条。状态类查看和清理收敛到药箱体检。
 - 前端统一调用 `medicineApi` 云函数，禁止直接操作 CloudBase 云数据库。
 - 家庭访问码由 `medicineApi` 读取环境变量 `FAMILY_CODE` 校验，前端只保存用户输入的访问码到 `localStorage`。
 - 本地开发默认支持 mock 数据模式，避免 CloudBase 环境未配置时阻塞界面开发和家庭试用。
@@ -17,6 +18,7 @@
 - CloudBase 云函数入口为 `cloudfunctions/medicineApi/index.js`，支持 `list/add/update/delete/adjustQuantity/addBatch` action。
 - UI 主题变量集中在 `src/styles/theme.css`，全局入口保留 `src/styles.css`；视觉规范通过 CSS Variables 管理，组件内只保留布局样式。
 - H5 主内容最大宽度控制为 480px，优先适配手机端，并通过 safe-area 变量保护底部操作区域。
+- 新增/编辑药品表单抽屉采用固定头部与固定底部保存栏，中间字段区域单独滚动，避免用户填写长表单时标题和保存入口漂移。
 - 首页分类模块默认折叠，点击分类头后展开；搜索药品时自动展开匹配分类，避免搜索结果被隐藏。
 - 默认分类清单为 11 类：发烧止痛、感冒、咳嗽、胃肠道、高血压、高尿酸、高血脂、皮肤、过敏、眼科、其他。
 - 首页分类横幅采用 AI 生成底图 + 本地叠加中文标题，再统一压缩为 webp，避免生成模型中文乱码并控制首页加载体积。
@@ -24,10 +26,17 @@
 - 高尿酸分类横幅避免使用脚/脚趾作为患处图案；用户反馈脚部图案容易引发不适，后续应改用手指、肘部、膝关节等更克制的患处表达。
 - Medicine 数据结构长期只保留 `updatedAt`，不再使用 `createdAt`；云函数新增药品不写 `createdAt`，编辑或库存调整时会清理旧文档中的 `createdAt`。
 - Medicine 库存采用批次模型：`batches` 保存每批 `expiryDate + quantity`，`quantity` 是批次数量合计，`expiryDate` 是最近一批有效期，用于列表、状态和旧数据兼容。
+- Medicine 可选服药信息包含 `dosageTiming` 和 `dosageCycle`；`dosageTiming` 默认值为 `不限`，可选 `不限/饭前/饭后`。`dosageCycle` 仍作为一个字符串字段保存，但表单中由可选子项组合生成：`一日x次`、`每次x颗`、`需连续服药x天/周/月`，整体可不填，任意子项也可不填；新增表单中前三个数值项默认显示为空，周期单位默认显示 `天`。
 - 库存增加可走 `addBatch` 录入明确有效期和数量；`adjustQuantity` 支持 `-1` 和 `1`，并优先调整最近过期批次。若 `+1` 时没有批次，则用当前 `expiryDate` 创建一批。
-- 状态筛选语义中，`有正常效期库存` 代表库存数量大于 0 且未过期；30 天内过期仍属于正常效期库存，已过期即使仍有数量也不属于该筛选。该状态只作为筛选项，不作为药品卡片标签展示。
-- 批次编辑采用卡片内 inline 编辑：点击批次行后直接编辑 `expiryDate` 和 `quantity`，失焦或回车自动保存；不新增弹窗和单独编辑按钮。
+- 状态筛选语义中，`有正常效期库存` 代表库存数量大于 0 且未过期；30 天内过期仍属于正常效期库存，已过期即使仍有数量也不属于该筛选。该状态只作为筛选项，不作为药品卡片标签展示。药品卡片标签展示层面，缺货优先级最高：`quantity === 0` 时只显示 `缺货`，不再叠加 `已过期` 或 `30天内过期` 标签。
+- 药箱体检复用 `getMedicineStatus` 状态口径，统计 `已过期`、`30天内过期`、`缺货`、`有正常效期库存`。已过期药品支持默认全选并批量调用现有 `medicineApi.delete` 软删除进入回收站，不走永久删除。
+- 批次编辑采用卡片内 inline 编辑：点击批次行后直接编辑 `expiryDate` 和 `quantity`，失焦或回车自动保存；批次删除走 `deleteBatch`，删除指定批次后先按剩余批次合计重算 `quantity`，再复用批次归一逻辑重算 `batches / quantity / expiryDate`，保持药品总量与批次数量合计一致。删除最后一批时必须显式传 `quantity: 0`，避免旧数据 fallback 把原库存重新补成 legacy 批次。
 - 药品图片 AI 识别统一走 CloudBase 云函数 `medicineApi` 的 `aiRecognizeMedicine` action；前端只传 CloudBase fileID/URL，不持有或调用 AI API Key。阿里百炼 API Key 必须配置在云函数环境变量 `ALI_API_KEY`。
+- Qwen-VL 药品识别返回内容需要容错处理：云函数先将 `cloud://` fileID 转为 HTTPS 临时 URL 后再传给 Qwen-VL；模型文本可能带 markdown code fence 或解释文字，`qwen.js` 需提取第一个 JSON object 后再解析，解析失败返回 `AI识别结果格式异常`。
+- 药品图片存储与预览必须分离：`medicine.imageUrl` / `form.imageUrl` 只保存 CloudBase Storage fileID；Vant uploader、药品卡片、详情图等展示位置必须通过 `resolveTempImageUrl` / `resolveMedicineImageUrl` 转成临时 URL 后再传给 `img`。临时 URL 获取失败时不使用 `cloud://` 兜底，直接隐藏预览或保留上传入口，避免裂图。
+- 新增药品 AI 回填药名后可能触发同名药品查询；如果当前表单已有上传得到的 `cloud://` fileID，必须优先保留当前 `form.imageUrl`，不能被同名药旧图片或空图片覆盖。
+- AI 识图链路的正式图片入参必须是 CloudBase Storage `cloud://` fileID。`data:image/...` base64 只允许作为本地临时预览，禁止写入 `form.imageUrl` / `medicine.imageUrl`，也禁止传给 `medicineApi.aiRecognizeMedicine`。
+- 新增药品表单的 AI 图片识别采用非阻塞体验：上传后立即预览并后台识别，前端 15 秒超时兜底，可手动重试；AI 结果只填充空字段，不覆盖用户已经输入或修改过的内容。
 - `npm run deploy` 是半自动发版入口：自动递增 package patch 版本、执行前端 build、生成 `dist/version.txt` 和 `dist/version.json`、保存 `dist-versions/vX.X.X/` 快照，并提示用户手动上传 `dist` 到 CloudBase 静态托管；云函数仍按需手动上传。
 - rollback 通过手动上传 `dist-versions/vX.X.X/` 的历史静态文件到 CloudBase 静态托管完成，不影响 CloudBase 数据库。
 
@@ -79,6 +88,19 @@
 - 2026-06-24: Adjusted stock status semantics. The stock filter label is now `有正常效期库存`, and it includes medicines with quantity greater than 0 whose expiry status is not expired, including expiring-soon medicines. Expired medicines are excluded even if quantity remains. This state is not shown as a medicine card tag; risk tags such as `缺货`, `已过期`, and `30天内过期` remain visible. `npm run build` passed.
 - 2026-06-24: Upgraded deploy system to SemVer patch releases and rollback snapshots. `scripts/deploy.js` now reads and increments `package.json` version, builds, writes `version.txt`/`version.json`, archives `dist` to `dist-versions/vX.X.X/`, and prints CloudBase upload plus rollback guidance. Added `scripts/ROLLBACK.md`; `node --check scripts/deploy.js` and `npm run build` passed.
 - 2026-06-24: Added CloudBase-mediated Qwen-VL medicine image recognition. `aiRecognizeMedicine` resolves CloudBase fileIDs to temporary URLs, calls Alibaba Bailian OpenAI-compatible chat completions through `cloudfunctions/medicineApi/qwen.js`, and returns `{ name, category, indications }` or `{ error: true, message: 'AI识别失败' }`. Frontend calls it after image upload and maps `indications` into the existing `note` field without changing the Medicine data model. `node -c cloudfunctions/medicineApi/index.js`, `node -c cloudfunctions/medicineApi/qwen.js`, and `npm run build` passed.
+- 2026-06-25: Fixed medicine image preview broken-image issue. `src/services/medicineStorage.ts` now exposes `resolveTempImageUrl` and validates upload `fileID`; `MedicineForm` stores fileID in `form.imageUrl` but only writes resolved temp URLs into Vant uploader preview. Existing medicine edit preview also clears the uploader instead of using `cloud://` when temp URL resolution fails. `npm run build` passed.
+- 2026-06-25: Added AI recognition status, 15-second timeout fallback, retry button, and empty-field-only backfill in `MedicineForm`. Upload preview remains fileID/tempUrl separated and manual form save is not blocked when AI fails or times out. `npm run build` passed.
+- 2026-06-25: Adjusted create form category to start empty with a selection hint and added medication usage fields. `dosageTiming` is required with default `不限`; `dosageCycle` is optional free text. Cloud function, mock same-name supplements, and detail view now preserve/display the new fields. `node -c cloudfunctions/medicineApi/index.js` and `npm run build` passed; browser check at `http://localhost:5174/` confirmed the form state.
+- 2026-06-25: Refined `dosageCycle` input from free text to a composed optional field in `MedicineForm`: daily frequency, per-dose amount, and continuous duration/unit are selected independently and saved back into the existing single `dosageCycle` string. `npm run build` passed.
+- 2026-06-25: Adjusted dosage cycle blank/default display: daily frequency, per-dose amount, and duration value render empty by default, while duration unit renders `天` by default. `npm run build` passed.
+- 2026-06-25: Reworked `MedicineForm` sheet layout into fixed header, scrollable middle content, and fixed save bar. `npm run build` passed and Vite HMR updated the local dev page.
+- 2026-06-25: Added global action bar and medicine health check. The home/list tabs now share `新增药品` and `药箱体检`; the category-manager main button and all-list dropdown filters are removed from the main UI. Health check shows four status buckets and can batch move expired medicines to recycle bin via existing soft-delete API. `npm run build` passed and Vite HMR updated the local dev page.
+- 2026-06-25: Added batch deletion from medicine card batch rows. Frontend `deleteBatch`, mock service, and CloudBase `medicineApi` action all recompute medicine totals from remaining batches. Medicine card metadata now displays category and expiry date on separate lines. `node -c cloudfunctions/medicineApi/index.js` and `npm run build` passed.
+- 2026-06-25: Fixed `deleteBatch` final-batch regression. Deleting the last batch now sets the remaining-batch quantity sum before normalization, so total quantity becomes 0 instead of recreating the old stock as a legacy batch. Batch delete UI was changed to a plain icon-only button. `node -c cloudfunctions/medicineApi/index.js` and `npm run build` passed.
+- 2026-06-25: Updated medicine card status label priority. `getMedicineStatus` still returns expiry status for logic, but labels now return only `缺货` when normalized quantity is 0, preventing out-of-stock medicines from also showing expiry warning tags. `npm run build` passed.
+- 2026-06-25: Added AI recognition diagnostics across `MedicineForm`, frontend `medicineApi.aiRecognizeMedicine`, CloudBase `aiRecognizeMedicine`, and `qwen.js`. Logs trace upload fileID, function params/results, CloudBase temp URL conversion, Qwen raw response, JSON extraction, normalized result, and failures without printing `ALI_API_KEY`. `node -c cloudfunctions/medicineApi/index.js`, `node -c cloudfunctions/medicineApi/qwen.js`, and `npm run build` passed.
+- 2026-06-25: Fixed AI image recognition chain staying in mock/base64 mode. Added local non-sensitive `.env` with `VITE_DATA_MODE=cloudbase` and CloudBase envId, normalized data-mode fallback, added console mode logs, forced cloudbase uploads to return `cloud://` fileID before saving or AI recognition, blocked `data:image/...` from AI input, and added HEIC/HEIF compatibility hints. `node -c cloudfunctions/medicineApi/index.js`, `node -c cloudfunctions/medicineApi/qwen.js`, and `npm run build` passed; browser check at `http://localhost:5175/` showed `data mode: cloudbase`.
+- 2026-06-25: Fixed medicine card broken images after AI recognition. `MedicineForm` now logs and preserves `form.imageUrl` before/after AI backfill and keeps the current uploaded `cloud://` fileID when same-name lookup runs after AI-filled names. `MedicineCard` resolves `cloud://` to temp URLs, logs raw/resolved prefixes plus load/error status, and falls back to an icon placeholder on resolve/load failure instead of rendering broken images. `npm run build` passed.
 
 ## Pending Confirmations
 - CloudBase 控制台登录授权需要开启「匿名登录」，否则 `auth.signInAnonymously()` 会返回「登录方式未开启」。

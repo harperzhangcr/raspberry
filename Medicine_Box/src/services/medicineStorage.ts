@@ -3,6 +3,8 @@ import { ensureCloudAuth, getCloudApp, logCloudBaseError } from './cloudbaseClie
 
 const tempUrlCache = new Map<string, string>();
 
+console.info('[medicineStorage] data mode:', DATA_MODE);
+
 function fileToDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -21,8 +23,31 @@ export function isCloudFileId(value: string) {
   return value.startsWith('cloud://');
 }
 
+function isHttpUrl(value: string) {
+  return value.startsWith('http://') || value.startsWith('https://');
+}
+
+function isDataImageUrl(value: string) {
+  return value.startsWith('data:image');
+}
+
+function getImageUrlPrefix(value: string) {
+  return value.slice(0, 80);
+}
+
+export function isLikelyHeicImage(file: File) {
+  const type = file.type.toLowerCase();
+  const name = file.name.toLowerCase();
+  return type.includes('heic') || type.includes('heif') || /\.(heic|heif)$/.test(name);
+}
+
 export async function uploadMedicineImage(file: File) {
+  if (!file) {
+    throw new Error('未选择图片');
+  }
+
   if (DATA_MODE === 'mock') {
+    console.log('[medicineStorage.uploadMedicineImage] mock upload, returning data URL preview only');
     return fileToDataUrl(file);
   }
 
@@ -31,31 +56,50 @@ export async function uploadMedicineImage(file: File) {
   try {
     const app = getCloudApp();
     await ensureCloudAuth();
+    console.log('[medicineStorage.uploadMedicineImage] cloudbase upload start:', {
+      cloudPath,
+      fileType: file.type,
+      fileSize: file.size,
+    });
     const result = await app.uploadFile({
       cloudPath,
       filePath: file as unknown as string,
     });
-    return result.fileID;
+    const fileID = String(result.fileID || '').trim();
+    console.log('[medicineStorage.uploadMedicineImage] cloudbase upload result:', {
+      hasFileID: Boolean(fileID),
+      prefix: fileID.slice(0, 16),
+    });
+    if (!fileID || !isCloudFileId(fileID)) {
+      throw new Error('图片上传成功但未返回 CloudBase fileID');
+    }
+    return fileID;
   } catch (error) {
     logCloudBaseError('Upload medicine image failed', error);
     throw error;
   }
 }
 
-export async function resolveMedicineImageUrl(imageUrl?: string) {
+export async function resolveTempImageUrl(imageUrl?: string) {
   const value = String(imageUrl || '').trim();
   if (!value) return '';
-  if (!isCloudFileId(value)) return value;
+  if (isHttpUrl(value) || isDataImageUrl(value)) return value;
+  if (!isCloudFileId(value)) {
+    console.warn('[medicineStorage.resolveMedicineImageUrl] unsupported imageUrl prefix:', getImageUrlPrefix(value));
+    return '';
+  }
   const cached = tempUrlCache.get(value);
   if (cached) return cached;
 
   try {
+    console.log('[medicineStorage.resolveMedicineImageUrl] resolving cloud fileID:', value.slice(0, 32));
     const app = getCloudApp();
     await ensureCloudAuth();
     const result = await app.getTempFileURL({
       fileList: [value],
     });
     const tempUrl = result.fileList?.[0]?.tempFileURL || '';
+    console.log('[medicineStorage.resolveMedicineImageUrl] resolved tempUrl prefix:', getImageUrlPrefix(tempUrl));
     if (tempUrl) {
       tempUrlCache.set(value, tempUrl);
       return tempUrl;
@@ -66,3 +110,5 @@ export async function resolveMedicineImageUrl(imageUrl?: string) {
     return '';
   }
 }
+
+export const resolveMedicineImageUrl = resolveTempImageUrl;

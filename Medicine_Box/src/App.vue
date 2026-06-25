@@ -40,10 +40,7 @@
 
       <van-tabs v-model:active="activeTab" class="tabs-shell">
         <van-tab title="分类药箱" name="home">
-          <section class="toolbar">
-            <van-button icon="plus" type="primary" size="small" @click="openCreateForm">新增药品</van-button>
-            <van-button icon="apps-o" size="small" @click="showCategoryManager = true">管理分类</van-button>
-          </section>
+          <GlobalActionBar @add-medicine="openCreateForm" @open-health-check="showHealthCheck = true" />
 
           <section v-if="loading && medicines.length === 0" class="loading-panel">
             <van-loading color="var(--color-primary)">正在整理药箱</van-loading>
@@ -90,6 +87,7 @@
                   @adjust="handleAdjustQuantity"
                   @add-batch="openBatchForm"
                   @update-batch="handleUpdateBatch"
+                  @delete-batch="handleDeleteBatch"
                 />
               </div>
             </article>
@@ -97,22 +95,7 @@
         </van-tab>
 
         <van-tab title="全部列表" name="list">
-          <section class="filters">
-            <van-dropdown-menu>
-              <van-dropdown-item
-                v-model="selectedCategory"
-                :options="categoryOptions"
-                @open="lockDropdownScroll"
-                @close="unlockDropdownScroll"
-              />
-              <van-dropdown-item
-                v-model="statusFilter"
-                :options="statusOptions"
-                @open="lockDropdownScroll"
-                @close="unlockDropdownScroll"
-              />
-            </van-dropdown-menu>
-          </section>
+          <GlobalActionBar @add-medicine="openCreateForm" @open-health-check="showHealthCheck = true" />
 
           <section v-if="loading && medicines.length === 0" class="loading-panel">
             <van-loading color="var(--color-primary)">正在加载药品</van-loading>
@@ -129,6 +112,7 @@
               @adjust="handleAdjustQuantity"
               @add-batch="openBatchForm"
               @update-batch="handleUpdateBatch"
+              @delete-batch="handleDeleteBatch"
             />
           </section>
         </van-tab>
@@ -201,12 +185,14 @@
           </van-tag>
         </div>
         <div v-if="detailImageUrl" class="detail-photo">
-          <img :src="detailImageUrl" :alt="detailMedicine.name" />
+          <img :src="detailImageUrl" :alt="detailMedicine.name" @error="detailImageUrl = ''" />
         </div>
         <div class="detail-card">
           <van-cell title="分类" :value="detailMedicine.category" />
           <van-cell title="数量" :value="`${detailMedicine.quantity}${detailMedicine.unit}`" />
           <van-cell title="有效期" :value="detailMedicine.expiryDate" />
+          <van-cell title="服用方法" :value="detailMedicine.dosageTiming || '不限'" />
+          <van-cell v-if="detailMedicine.dosageCycle" title="用药周期" :value="detailMedicine.dosageCycle" />
           <van-cell v-if="detailMedicine.location" title="存放位置" :value="detailMedicine.location" />
           <div class="detail-note-row">
             <span>备注</span>
@@ -215,6 +201,14 @@
           <van-cell title="更新时间" :value="formatDateTime(detailMedicine.updatedAt)" />
         </div>
       </section>
+    </van-popup>
+
+    <van-popup v-model:show="showHealthCheck" position="bottom" round class="sheet-popup">
+      <MedicineHealthCheck
+        :medicines="medicines"
+        @close="showHealthCheck = false"
+        @move-expired-to-recycle="handleMoveExpiredToRecycle"
+      />
     </van-popup>
 
     <van-popup v-model:show="showCategoryManager" position="bottom" round class="sheet-popup">
@@ -277,8 +271,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { showConfirmDialog, showFailToast, showSuccessToast } from 'vant';
+import GlobalActionBar from './components/GlobalActionBar.vue';
+import MedicineHealthCheck from './components/MedicineHealthCheck.vue';
 import MedicineCard from './components/MedicineCard.vue';
 import MedicineForm from './components/MedicineForm.vue';
 import RecycleMedicineCard from './components/RecycleMedicineCard.vue';
@@ -286,7 +282,7 @@ import { getCategoryAsset } from './categoryAssets';
 import { DEFAULT_CATEGORIES, FAMILY_CODE_STORAGE_KEY } from './constants';
 import { medicineApi } from './services/medicineApi';
 import { resolveMedicineImageUrl } from './services/medicineStorage';
-import type { Medicine, MedicineBatchInput, MedicineInput, StatusFilter } from './types';
+import type { Medicine, MedicineBatchInput, MedicineInput } from './types';
 import {
   filterMedicines,
   formatDateTime,
@@ -312,8 +308,6 @@ function readStoredCategories() {
 
 const customCategories = ref<string[]>(readStoredCategories());
 const keyword = ref('');
-const selectedCategory = ref('全部');
-const statusFilter = ref<StatusFilter>('all');
 const activeTab = ref('home');
 const expandedCategories = ref<string[]>([]);
 const loading = ref(false);
@@ -332,6 +326,7 @@ const batchForm = reactive<MedicineBatchInput>({
 });
 const batchQuantityInput = ref('1');
 const showCategoryManager = ref(false);
+const showHealthCheck = ref(false);
 const showRecycleBin = ref(false);
 const newCategory = ref('');
 const showRenameDialog = ref(false);
@@ -344,36 +339,11 @@ const categoryGroups = computed(() => {
   return groupByCategory(visible, categories.value);
 });
 const filteredMedicines = computed(() =>
-  filterMedicines(medicines.value, keyword.value, selectedCategory.value, statusFilter.value),
+  filterMedicines(medicines.value, keyword.value, '全部', 'all'),
 );
-const categoryOptions = computed(() => [
-  { text: '全部分类', value: '全部' },
-  ...categories.value.map((category) => ({ text: category, value: category })),
-]);
-const statusOptions = [
-  { text: '全部状态', value: 'all' },
-  { text: '有正常效期库存', value: 'inStock' },
-  { text: '缺货', value: 'outOfStock' },
-  { text: '已过期', value: 'expired' },
-  { text: '30天内过期', value: 'expiringSoon' },
-];
-let lockedScrollTop = 0;
 
 function isDialogCancel(error: unknown) {
   return error === 'cancel' || error === 'overlay';
-}
-
-function lockDropdownScroll() {
-  lockedScrollTop = window.scrollY || document.documentElement.scrollTop || 0;
-  document.body.style.top = `-${lockedScrollTop}px`;
-  document.body.classList.add('dropdown-scroll-locked');
-}
-
-function unlockDropdownScroll() {
-  if (!document.body.classList.contains('dropdown-scroll-locked')) return;
-  document.body.classList.remove('dropdown-scroll-locked');
-  document.body.style.top = '';
-  window.scrollTo(0, lockedScrollTop);
 }
 
 function isCategoryExpanded(category: string) {
@@ -496,6 +466,8 @@ async function handleSubmitMedicine(payload: MedicineInput, matchedMedicine: Med
         note: payload.note,
         location: payload.location,
         imageUrl: payload.imageUrl,
+        dosageTiming: payload.dosageTiming,
+        dosageCycle: payload.dosageCycle,
       });
       await medicineApi.addBatch(familyCode.value, matchedMedicine._id, {
         expiryDate: payload.expiryDate,
@@ -531,6 +503,28 @@ async function handleDelete(medicine: Medicine) {
   } catch (error) {
     if (!isDialogCancel(error)) {
       showFailToast(error instanceof Error ? error.message : '删除失败');
+    }
+  }
+}
+
+async function handleMoveExpiredToRecycle(ids: string[]) {
+  const selectedIds = Array.from(new Set(ids));
+  if (selectedIds.length === 0) {
+    showFailToast('请选择要清理的药品');
+    return;
+  }
+
+  try {
+    await showConfirmDialog({
+      title: '移入回收站',
+      message: `确认将 ${selectedIds.length} 个已过期药品移入回收站？\n移入后可在回收站恢复。`,
+    });
+    await Promise.all(selectedIds.map((id) => medicineApi.delete(familyCode.value, id)));
+    showSuccessToast('已移入回收站');
+    await loadMedicines();
+  } catch (error) {
+    if (!isDialogCancel(error)) {
+      showFailToast(error instanceof Error ? error.message : '批量清理失败');
     }
   }
 }
@@ -595,6 +589,22 @@ async function handleUpdateBatch(medicine: Medicine, batchId: string, batch: Med
   }
 }
 
+async function handleDeleteBatch(medicine: Medicine, batchId: string) {
+  try {
+    await showConfirmDialog({
+      title: '删除库存批次',
+      message: '删除后会同步更新药品总库存，确定删除这一批吗？',
+    });
+    await medicineApi.deleteBatch(familyCode.value, medicine._id, batchId);
+    showSuccessToast('已删除批次');
+    await loadMedicines();
+  } catch (error) {
+    if (!isDialogCancel(error)) {
+      showFailToast(error instanceof Error ? error.message : '批次删除失败');
+    }
+  }
+}
+
 function addCategory() {
   const value = newCategory.value.trim();
   if (!value) {
@@ -647,10 +657,6 @@ async function confirmRenameCategory() {
 }
 
 onMounted(loadMedicines);
-
-onBeforeUnmount(() => {
-  unlockDropdownScroll();
-});
 
 watch(
   customCategories,

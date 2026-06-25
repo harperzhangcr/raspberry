@@ -16,6 +16,8 @@ export interface Medicine {
   note?: string;
   location?: string;
   imageUrl?: string;
+  dosageTiming?: string;
+  dosageCycle?: string;
   deletedAt?: number;
   updatedAt: number;
 }

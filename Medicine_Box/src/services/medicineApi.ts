@@ -13,6 +13,8 @@ import { ensureCloudAuth, getCloudApp, logCloudBaseError } from './cloudbaseClie
 
 let localMedicines: Medicine[] = [...mockMedicines];
 
+console.info('[medicineApi] data mode:', DATA_MODE);
+
 function assertSuccess(result: unknown) {
   const response = result as { result?: { success?: boolean; message?: string; data?: unknown } };
   if (!response.result?.success) {
@@ -80,6 +82,12 @@ function withEmptyFieldSupplements(existing: Medicine, incoming: MedicineInput):
     imageUrl: existing.imageUrl?.trim() ? existing.imageUrl : incoming.imageUrl?.trim() || existing.imageUrl,
     location: existing.location?.trim() ? existing.location : incoming.location?.trim() || existing.location,
     note: existing.note?.trim() ? existing.note : incoming.note?.trim() || existing.note,
+    dosageTiming: existing.dosageTiming?.trim()
+      ? existing.dosageTiming
+      : incoming.dosageTiming?.trim() || existing.dosageTiming,
+    dosageCycle: existing.dosageCycle?.trim()
+      ? existing.dosageCycle
+      : incoming.dosageCycle?.trim() || existing.dosageCycle,
   };
 }
 
@@ -306,18 +314,50 @@ export const medicineApi = {
     return callMedicineApi<Medicine>('updateBatch', { familyCode, id, batchId, batch });
   },
 
+  async deleteBatch(familyCode: string, id: string, batchId: string) {
+    if (DATA_MODE === 'mock') {
+      let updated: Medicine | undefined;
+      localMedicines = localMedicines.map((item) => {
+        if (item._id !== id) return item;
+        const normalized = syncMedicineFromBatches(item);
+        const nextBatches = normalized.batches.filter((source) => source.id !== batchId);
+        if (nextBatches.length === normalized.batches.length) return item;
+        const nextQuantity = nextBatches.reduce((sum, source) => sum + source.quantity, 0);
+        updated = syncMedicineFromBatches({
+          ...normalized,
+          batches: nextBatches,
+          quantity: nextQuantity,
+          expiryDate: nextBatches[0]?.expiryDate || normalized.expiryDate,
+          updatedAt: Date.now(),
+        });
+        return updated;
+      });
+      if (!updated) throw new Error('未找到库存批次');
+      return mockDelay(updated);
+    }
+    return callMedicineApi<Medicine>('deleteBatch', { familyCode, id, batchId });
+  },
+
   async aiRecognizeMedicine(familyCode: string, imageUrl: string) {
     if (DATA_MODE === 'mock') {
+      console.log('[medicineApi.aiRecognizeMedicine] mock input:', { imageUrl });
       return mockDelay<AiMedicineRecognition>({
         name: '',
         category: '',
         indications: '',
       });
     }
+    console.log('[medicineApi.aiRecognizeMedicine] cloudbase input:', { imageUrl });
+    console.log('[medicineApi.aiRecognizeMedicine] callFunction params:', {
+      action: 'aiRecognizeMedicine',
+      imageUrl,
+      hasFamilyCode: Boolean(familyCode),
+    });
     const result = await callMedicineApi<AiMedicineRecognition & { error?: boolean; message?: string }>(
       'aiRecognizeMedicine',
       { familyCode, imageUrl },
     );
+    console.log('[medicineApi.aiRecognizeMedicine] callFunction result:', result);
     if (result.error) {
       throw new Error(result.message || 'AI识别失败');
     }
