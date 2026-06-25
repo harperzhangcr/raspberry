@@ -4,9 +4,9 @@
       <div>
         <p class="eyebrow">Medicine Check</p>
         <h2>药箱体检</h2>
-        <p>已为你检查家庭药箱库存状态</p>
+        <p class="health-check__subtitle">已为你检查家庭药箱库存状态</p>
       </div>
-      <van-button icon="cross" size="small" plain aria-label="关闭药箱体检" @click="$emit('close')" />
+      <van-button class="icon-close-button" icon="cross" size="small" plain aria-label="关闭药箱体检" @click="$emit('close')" />
     </div>
 
     <template v-if="activeView === 'overview'">
@@ -45,7 +45,7 @@
 
     <template v-else>
       <div class="health-view-title">
-        <van-button icon="arrow-left" size="small" plain @click="backToOverview">返回</van-button>
+        <van-button class="text-back-button" icon="arrow-left" size="small" plain @click="backToOverview">返回</van-button>
         <div>
           <h3>{{ currentViewConfig.title }}</h3>
           <p>{{ currentViewConfig.description }}</p>
@@ -201,6 +201,7 @@ watch(
 .health-check-panel {
   display: flex;
   flex-direction: column;
+  height: min(88vh, 760px);
   max-height: min(88vh, 760px);
   padding: var(--space-lg) var(--space-md) calc(var(--space-lg) + var(--safe-bottom));
   overflow: hidden;
@@ -228,7 +229,7 @@ watch(
   font-size: var(--font-size-xl);
 }
 
-.health-check__header p,
+.health-check__subtitle,
 .health-view-title p,
 .health-card p,
 .health-list-item span {
@@ -236,6 +237,19 @@ watch(
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
   line-height: var(--line-relaxed);
+}
+
+.health-check__header .eyebrow {
+  margin: 0 0 var(--space-sm);
+  color: var(--color-primary);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  line-height: var(--line-normal);
+}
+
+.health-check__subtitle {
+  margin-top: var(--space-sm);
+  font-size: var(--font-size-md);
 }
 
 .health-section {
@@ -302,6 +316,31 @@ watch(
   gap: var(--space-md);
   align-items: center;
   margin-bottom: var(--space-md);
+}
+
+.text-back-button {
+  width: auto;
+  min-width: 0;
+  min-height: var(--tap-size);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: var(--color-text-secondary);
+  background: transparent;
+  box-shadow: none;
+}
+
+.text-back-button::before {
+  display: none;
+}
+
+.text-back-button :deep(.van-button__content) {
+  gap: 2px;
+}
+
+.text-back-button :deep(.van-button__icon) {
+  margin: 0;
+  font-size: 18px;
 }
 
 .health-list {

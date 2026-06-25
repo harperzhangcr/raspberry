@@ -2,8 +2,7 @@
   <main class="app-shell">
     <section v-if="!familyCode" class="access-page">
       <div class="access-panel">
-        <div class="access-mark" aria-hidden="true">＋</div>
-        <p class="eyebrow">家庭自用</p>
+        <p class="eyebrow">Family Medicine Box</p>
         <h1>家庭药箱</h1>
         <p class="access-copy">输入家庭访问码后继续，下次打开会自动进入。</p>
 
@@ -29,8 +28,16 @@
           <p class="topbar-subtitle">快速找到家里的常用药</p>
         </div>
         <div class="topbar-actions">
-          <van-button size="small" plain @click="openRecycleBin">回收站</van-button>
-          <van-button size="small" plain type="primary" @click="resetCode">更换访问码</van-button>
+          <van-popover
+            v-model:show="showMoreMenu"
+            placement="bottom-end"
+            :actions="moreMenuActions"
+            @select="handleMoreMenuSelect"
+          >
+            <template #reference>
+              <button class="topbar-more-button" type="button" aria-label="更多菜单">⋯</button>
+            </template>
+          </van-popover>
         </div>
       </header>
 
@@ -137,8 +144,9 @@
           <div>
             <p class="eyebrow">Add Stock</p>
             <h2>新增库存</h2>
+            <p>为当前药品补充新的库存批次</p>
           </div>
-          <van-button icon="cross" size="small" plain @click="showBatchForm = false" />
+          <van-button class="icon-close-button" icon="cross" size="small" plain @click="showBatchForm = false" />
         </div>
         <div class="batch-target">
           <strong>{{ batchMedicine.name }}</strong>
@@ -173,7 +181,7 @@
       <section v-if="detailMedicine" class="detail-panel">
         <div class="sheet-title">
           <h2>{{ detailMedicine.name }}</h2>
-          <van-button icon="cross" size="small" plain @click="showDetail = false" />
+          <van-button class="icon-close-button" icon="cross" size="small" plain @click="showDetail = false" />
         </div>
         <div class="detail-tags">
           <van-tag
@@ -189,16 +197,16 @@
         </div>
         <div class="detail-card">
           <van-cell title="分类" :value="detailMedicine.category" />
-          <van-cell title="数量" :value="`${detailMedicine.quantity}${detailMedicine.unit}`" />
+          <van-cell title="数量" :value="String(detailMedicine.quantity)" />
+          <van-cell title="单位" :value="detailMedicine.unit" />
+          <van-cell v-if="detailMedicine.location" title="存放位置" :value="detailMedicine.location" />
           <van-cell title="有效期" :value="detailMedicine.expiryDate" />
           <van-cell title="服用方法" :value="detailMedicine.dosageTiming || '不限'" />
           <van-cell v-if="detailMedicine.dosageCycle" title="用药周期" :value="detailMedicine.dosageCycle" />
-          <van-cell v-if="detailMedicine.location" title="存放位置" :value="detailMedicine.location" />
           <div class="detail-note-row">
             <span>备注</span>
             <p>{{ detailMedicine.note || '无' }}</p>
           </div>
-          <van-cell title="更新时间" :value="formatDateTime(detailMedicine.updatedAt)" />
         </div>
       </section>
     </van-popup>
@@ -214,8 +222,12 @@
     <van-popup v-model:show="showCategoryManager" position="bottom" round class="sheet-popup">
       <section class="category-manager">
         <div class="sheet-title">
-          <h2>管理分类</h2>
-          <van-button icon="cross" size="small" plain @click="showCategoryManager = false" />
+          <div>
+            <p class="eyebrow">Category</p>
+            <h2>管理分类</h2>
+            <p>整理家庭药箱的分类名称</p>
+          </div>
+          <van-button class="icon-close-button" icon="cross" size="small" plain @click="showCategoryManager = false" />
         </div>
         <div class="category-card">
           <div class="category-add-row">
@@ -239,8 +251,9 @@
           <div>
             <p class="eyebrow">Recycle Bin</p>
             <h2>回收站</h2>
+            <p>恢复或永久删除已移入回收站的药品</p>
           </div>
-          <van-button icon="cross" size="small" plain @click="showRecycleBin = false" />
+          <van-button class="icon-close-button" icon="cross" size="small" plain @click="showRecycleBin = false" />
         </div>
 
         <section v-if="recycleLoading" class="loading-panel">
@@ -285,7 +298,6 @@ import { resolveMedicineImageUrl } from './services/medicineStorage';
 import type { Medicine, MedicineBatchInput, MedicineInput } from './types';
 import {
   filterMedicines,
-  formatDateTime,
   getCategories,
   getMedicineStatus,
   groupByCategory,
@@ -328,6 +340,7 @@ const batchQuantityInput = ref('1');
 const showCategoryManager = ref(false);
 const showHealthCheck = ref(false);
 const showRecycleBin = ref(false);
+const showMoreMenu = ref(false);
 const newCategory = ref('');
 const showRenameDialog = ref(false);
 const renameCategorySource = ref('');
@@ -341,6 +354,7 @@ const categoryGroups = computed(() => {
 const filteredMedicines = computed(() =>
   filterMedicines(medicines.value, keyword.value, '全部', 'all'),
 );
+const moreMenuActions = [{ text: '回收站', value: 'recycleBin' }];
 
 function isDialogCancel(error: unknown) {
   return error === 'cancel' || error === 'overlay';
@@ -412,8 +426,15 @@ function resetCode() {
 }
 
 async function openRecycleBin() {
+  showMoreMenu.value = false;
   showRecycleBin.value = true;
   await loadDeletedMedicines();
+}
+
+function handleMoreMenuSelect(action: { value?: string }) {
+  if (action.value === 'recycleBin') {
+    void openRecycleBin();
+  }
 }
 
 function openCreateForm() {

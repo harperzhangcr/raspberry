@@ -5,12 +5,58 @@
         <p class="eyebrow">{{ medicine ? 'Edit Medicine' : 'New Medicine' }}</p>
         <h2>{{ medicine ? '编辑药品' : '新增药品' }}</h2>
       </div>
-      <van-button icon="cross" size="small" plain aria-label="关闭表单" @click="$emit('cancel')" />
+      <van-button class="icon-close-button" icon="cross" size="small" plain aria-label="关闭表单" @click="$emit('cancel')" />
     </div>
 
     <van-form class="medicine-form" @submit="submit">
       <div class="form-scroll">
-        <section class="form-card">
+        <section class="form-card form-section-card">
+          <div class="form-section-heading">
+            <h3>AI识别</h3>
+          </div>
+          <div class="photo-field photo-field--hero">
+            <div class="photo-field__label">药品照片</div>
+            <div class="photo-field__body">
+              <van-uploader
+                v-model="imageFileList"
+                accept="image/*"
+                image-fit="cover"
+                reupload
+                :after-read="handleImageRead"
+                :before-delete="handleImageDelete"
+                :max-count="1"
+                :preview-size="[96, 96]"
+                upload-icon="photograph"
+                upload-text="上传/拍照"
+              />
+              <div class="ai-recognition">
+                <div v-if="isRecognizing" class="ai-recognition__status">
+                  <van-loading size="14" color="var(--color-primary)" />
+                  <span>正在识别药品信息...</span>
+                </div>
+                <p v-else-if="recognizeError" class="ai-recognition__error">{{ recognizeError }}</p>
+                <p v-else-if="lastRecognizedImageUrl" class="ai-recognition__success">已识别并填入药品信息</p>
+                <p v-else class="ai-recognition__hint">拍照或上传药品照片后，可自动识别药名和分类</p>
+                <van-button
+                  v-if="form.imageUrl"
+                  class="ai-recognition__retry"
+                  size="mini"
+                  plain
+                  type="primary"
+                  :disabled="isRecognizing"
+                  @click="retryRecognizeImage"
+                >
+                  {{ isRecognizing ? '识别中...' : '重新识别' }}
+                </van-button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="form-card form-section-card">
+          <div class="form-section-heading">
+            <h3>药品信息</h3>
+          </div>
           <van-field
             v-model="form.name"
             name="name"
@@ -18,6 +64,7 @@
             placeholder="例如：布洛芬"
             :readonly="isNameLocked"
             :rules="[{ required: true, message: '请输入药名' }]"
+            @update:model-value="markManualFieldEdit('name')"
           />
           <van-field
             v-model="form.category"
@@ -31,25 +78,39 @@
           />
         </section>
 
-        <section class="form-card form-card--grid">
+        <section class="form-card form-section-card">
+          <div class="form-section-heading">
+            <h3>库存</h3>
+          </div>
+          <div class="form-card--grid">
+            <van-field
+              v-model.number="form.quantity"
+              type="number"
+              name="quantity"
+              label="数量"
+              placeholder="0"
+              :rules="[{ required: true, message: '请输入数量' }]"
+            />
+            <van-field
+              v-model="form.unit"
+              name="unit"
+              label="单位"
+              placeholder="盒、瓶、板、袋"
+              :rules="[{ required: true, message: '请输入单位' }]"
+            />
+          </div>
           <van-field
-            v-model.number="form.quantity"
-            type="number"
-            name="quantity"
-            label="数量"
-            placeholder="0"
-            :rules="[{ required: true, message: '请输入数量' }]"
-          />
-          <van-field
-            v-model="form.unit"
-            name="unit"
-            label="单位"
-            placeholder="盒、瓶、板、袋"
-            :rules="[{ required: true, message: '请输入单位' }]"
+            v-model="form.location"
+            name="location"
+            label="存放位置"
+            placeholder="例如 药箱1 / 客厅抽屉 / 冰箱"
           />
         </section>
 
-        <section class="form-card">
+        <section class="form-card form-section-card form-card--medicine-info">
+          <div class="form-section-heading">
+            <h3>使用规则</h3>
+          </div>
           <van-field
             v-model="form.expiryDate"
             type="date"
@@ -96,57 +157,16 @@
             </div>
           </div>
           <van-field
+            class="note-field"
             v-model="form.note"
-            rows="3"
+            rows="2"
             autosize
             type="textarea"
             name="note"
             label="备注"
             placeholder="例如：儿童用、饭后服、需冷藏"
+            @update:model-value="markManualFieldEdit('note')"
           />
-        </section>
-
-        <section class="form-card">
-          <van-field
-            v-model="form.location"
-            name="location"
-            label="存放位置"
-            placeholder="例如 药箱1 / 客厅抽屉 / 冰箱"
-          />
-          <div class="photo-field">
-            <div class="photo-field__label">药品照片</div>
-            <div class="photo-field__body">
-              <van-uploader
-                v-model="imageFileList"
-                accept="image/*"
-                image-fit="cover"
-                reupload
-                :after-read="handleImageRead"
-                :before-delete="handleImageDelete"
-                :max-count="1"
-                :preview-size="[88, 88]"
-                upload-icon="photograph"
-                upload-text="上传/拍照"
-              />
-              <div v-if="form.imageUrl" class="ai-recognition">
-                <div v-if="isRecognizing" class="ai-recognition__status">
-                  <van-loading size="14" color="var(--color-primary)" />
-                  <span>正在识别药品信息...</span>
-                </div>
-                <p v-else-if="recognizeError" class="ai-recognition__error">{{ recognizeError }}</p>
-                <van-button
-                  class="ai-recognition__retry"
-                  size="mini"
-                  plain
-                  type="primary"
-                  :disabled="isRecognizing"
-                  @click="retryRecognizeImage"
-                >
-                  {{ isRecognizing ? '识别中...' : '重新识别' }}
-                </van-button>
-              </div>
-            </div>
-          </div>
         </section>
       </div>
 
@@ -285,10 +305,13 @@ const dosageCyclePickerColumns = computed(() => {
   return columns[activeDosageCyclePart.value];
 });
 const isNameLocked = computed(() => !props.medicine && !!matchedMedicine.value);
+type RecognizedField = 'name' | 'category' | 'note';
 let imagePreviewRequestId = 0;
 let nameLookupRequestId = 0;
 let nameLookupTimer: number | undefined;
 let aiRecognitionRequestId = 0;
+const aiBackfilledFields = new Set<RecognizedField>();
+const manuallyEditedFields = new Set<RecognizedField>();
 const AI_RECOGNITION_FAIL_MESSAGE = 'AI识别失败，可手动填写';
 const AI_RECOGNITION_TIMEOUT_MESSAGE = 'AI识别时间较长，请手动填写或稍后重试';
 
@@ -363,6 +386,8 @@ watch(
     isRecognizing.value = false;
     recognizeError.value = null;
     lastRecognizedImageUrl.value = null;
+    aiBackfilledFields.clear();
+    manuallyEditedFields.clear();
     aiRecognitionRequestId += 1;
     void syncImagePreview(form.imageUrl);
   },
@@ -425,20 +450,35 @@ function getImagePrefix(value?: string) {
   return String(value || '').trim().slice(0, 80);
 }
 
+function markManualFieldEdit(field: RecognizedField) {
+  manuallyEditedFields.add(field);
+  aiBackfilledFields.delete(field);
+}
+
 function applyRecognitionResult(result: AiMedicineRecognition) {
-  if (props.medicine || matchedMedicine.value) return;
+  if (props.medicine) return;
   console.log('[MedicineForm] before AI backfill form.imageUrl:', getImagePrefix(form.imageUrl));
-  if (isEmptyField(form.name) && result.name.trim()) {
-    form.name = result.name.trim();
-  }
+  applyRecognizedField('name', result.name);
   const category = normalizeRecognizedCategory(result.category);
-  if (isEmptyField(form.category) && category) {
-    form.category = category;
-  }
-  if (isEmptyField(form.note) && result.indications.trim()) {
-    form.note = result.indications.trim();
-  }
+  applyRecognizedField('category', category);
+  applyRecognizedField('note', result.indications);
   console.log('[MedicineForm] after AI backfill form.imageUrl:', getImagePrefix(form.imageUrl));
+}
+
+function applyRecognizedField(field: RecognizedField, value: string) {
+  const nextValue = value.trim();
+  if (!nextValue) return;
+  const currentValue = String(form[field] || '').trim();
+  const canOverwrite =
+    isEmptyField(currentValue) ||
+    (aiBackfilledFields.has(field) && !manuallyEditedFields.has(field)) ||
+    (!!matchedMedicine.value && !manuallyEditedFields.has(field));
+  if (!canOverwrite) return;
+  if (field === 'name' && currentValue !== nextValue) {
+    matchedMedicine.value = null;
+  }
+  form[field] = nextValue;
+  aiBackfilledFields.add(field);
 }
 
 function withRecognitionTimeout<T>(promise: Promise<T>) {
@@ -510,6 +550,7 @@ function retryRecognizeImage() {
 
 function onCategoryConfirm(event: { selectedOptions: Array<{ text: string; value: string }> }) {
   form.category = event.selectedOptions[0]?.value || '';
+  markManualFieldEdit('category');
   showCategoryPicker.value = false;
 }
 
@@ -537,6 +578,7 @@ async function handleImageRead(item: UploaderFileListItem | UploaderFileListItem
     showToast('当前图片格式可能不兼容，请使用 JPG/PNG 图片');
   }
 
+  resetAIRecognitionForNewImage('pending-upload');
   fileItem.status = 'uploading';
   fileItem.message = '上传中';
 
@@ -559,6 +601,7 @@ async function handleImageRead(item: UploaderFileListItem | UploaderFileListItem
 
     console.log('[MedicineForm] uploaded fileID:', fileID);
     form.imageUrl = fileID;
+    resetAIRecognitionForNewImage(fileID);
     const previewUrl = await resolveTempImageUrl(fileID);
     if (previewUrl) {
       setUploaderPreview(previewUrl);
@@ -577,11 +620,21 @@ async function handleImageRead(item: UploaderFileListItem | UploaderFileListItem
   }
 }
 
+function resetAIRecognitionForNewImage(imageUrl: string) {
+  console.log('[MedicineForm] reset AI recognition state for new image:', { imageUrl });
+  aiRecognitionRequestId += 1;
+  isRecognizing.value = false;
+  recognizeError.value = null;
+  lastRecognizedImageUrl.value = null;
+}
+
 function handleImageDelete() {
   aiRecognitionRequestId += 1;
   isRecognizing.value = false;
   recognizeError.value = null;
   lastRecognizedImageUrl.value = null;
+  aiBackfilledFields.clear();
+  manuallyEditedFields.clear();
   form.imageUrl = '';
   imageFileList.value = [];
   return true;
@@ -653,7 +706,7 @@ function submit() {
 }
 
 .form-card {
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-card-solid);
@@ -665,8 +718,48 @@ function submit() {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 
-.form-card--grid :deep(.van-cell:first-child) {
+.form-card--grid :deep(.van-cell:first-child),
+.form-card--grid > :deep(.van-cell:first-child) {
   border-right: 1px solid var(--color-border);
+}
+
+.form-section-card {
+  padding-top: var(--space-md);
+}
+
+.form-section-heading {
+  padding: 0 var(--space-md) var(--space-sm);
+}
+
+.form-section-heading h3 {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--color-text);
+  font-size: var(--font-size-lg);
+  font-weight: 750;
+  line-height: var(--line-normal);
+}
+
+.form-card--medicine-info {
+  overflow: visible;
+}
+
+.form-card--medicine-info :deep(.van-cell) {
+  min-height: 58px;
+}
+
+.form-card > :deep(.van-cell)::after {
+  display: none;
+}
+
+.form-card > * + *,
+.form-card--grid > * + * {
+  border-top: 1px solid var(--color-border);
+}
+
+.form-card > .form-section-heading + *,
+.form-card--grid > * + * {
+  border-top: 0;
 }
 
 .form-card :deep(.van-field) {
@@ -694,38 +787,52 @@ function submit() {
 }
 
 .form-card :deep(textarea) {
-  min-height: 76px;
+  min-height: 54px;
   align-items: flex-start;
   line-height: var(--line-relaxed);
+}
+
+.form-card :deep(.note-field) {
+  align-items: flex-start;
+}
+
+.form-card :deep(.note-field .van-field__label) {
+  padding-top: 2px;
+}
+
+.form-card :deep(.note-field .van-field__body),
+.form-card :deep(.note-field .van-field__control) {
+  align-items: flex-start;
 }
 
 .dosage-cycle-field {
   display: grid;
   grid-template-columns: 70px minmax(0, 1fr);
   gap: var(--space-md);
-  align-items: center;
-  min-height: 72px;
+  align-items: flex-start;
+  min-height: 82px;
   padding: 14px var(--space-md);
 }
 
 .dosage-cycle-field__label {
+  padding-top: 5px;
   color: var(--color-text-secondary);
   font-size: var(--font-size-md);
   line-height: var(--line-normal);
 }
 
 .dosage-cycle-field__controls {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: var(--space-xs);
   min-width: 0;
 }
 
 .dosage-cycle-part {
   display: inline-flex;
-  flex: 0 1 auto;
-  gap: 4px;
+  width: 100%;
+  gap: var(--space-xs);
   align-items: center;
+  justify-content: flex-start;
   color: var(--color-text);
   font-size: var(--font-size-sm);
   line-height: var(--line-normal);
@@ -733,18 +840,19 @@ function submit() {
 }
 
 .dosage-cycle-part--duration {
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .dosage-cycle-select {
-  min-width: 48px;
-  height: 30px;
+  min-width: 54px;
+  height: 32px;
   padding: 0 var(--space-sm);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-surface-muted);
-  color: var(--color-primary);
+  color: var(--color-text);
   font: inherit;
+  font-weight: 600;
   line-height: 28px;
 }
 
@@ -752,12 +860,17 @@ function submit() {
   display: grid;
   grid-template-columns: 70px minmax(0, 1fr);
   gap: var(--space-md);
-  min-height: 112px;
-  align-items: center;
-  padding: 14px var(--space-md);
+  min-height: 128px;
+  align-items: flex-start;
+  padding: 18px var(--space-md) 22px;
+}
+
+.photo-field--hero {
+  padding-top: var(--space-xs);
 }
 
 .photo-field__label {
+  padding-top: 8px;
   color: var(--color-text-secondary);
   font-size: var(--font-size-md);
   line-height: var(--line-normal);
@@ -790,6 +903,19 @@ function submit() {
   color: var(--color-danger);
   font-size: var(--font-size-xs);
   line-height: var(--line-relaxed);
+}
+
+.ai-recognition__hint,
+.ai-recognition__success {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-relaxed);
+}
+
+.ai-recognition__success {
+  color: #20713b;
 }
 
 .ai-recognition__retry {
