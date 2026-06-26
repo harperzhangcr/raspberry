@@ -9,7 +9,9 @@
 
 ## Long-Term Decisions
 - 首页采用「分类药箱目录」结构，而不是以过期/缺货报表为首页中心。
+- 首页 Tab 使用独立伪元素滑块承载 active 背景，滑块通过 `top: 50%` + `translateY(-50%)` 在外层圆角矩形内垂直居中，并只通过 `transform` 做轻微 cubic-bezier 回弹；文字状态只平滑切换颜色和字重，并支持 `prefers-reduced-motion` 关闭动画。
 - 首页全局操作区统一承载 `新增药品` 与 `药箱体检`；分类药箱页不再展示 `管理分类` 主入口，全部列表页不再展示分类/状态筛选条。状态类查看和清理收敛到药箱体检。
+- 首页全局操作区的次级操作按钮（如 `药箱体检`）不使用外边框，保持轻透明、内层质感，避免与主按钮形成过重的双按钮边界。
 - 前端统一调用 `medicineApi` 云函数，禁止直接操作 CloudBase 云数据库。
 - 家庭访问码由 `medicineApi` 读取环境变量 `FAMILY_CODE` 校验，前端只保存用户输入的访问码到 `localStorage`。
 - 本地开发默认支持 mock 数据模式，避免 CloudBase 环境未配置时阻塞界面开发和家庭试用。
@@ -19,6 +21,7 @@
 - UI 主题变量集中在 `src/styles/theme.css`，全局入口保留 `src/styles.css`；视觉规范通过 CSS Variables 管理，组件内只保留布局样式。
 - H5 主内容最大宽度控制为 480px，优先适配手机端，并通过 safe-area 变量保护底部操作区域。
 - 新增/编辑药品表单抽屉采用固定头部与固定底部保存栏，中间字段区域单独滚动，避免用户填写长表单时标题和保存入口漂移。
+- 药品详情抽屉采用固定顶部信息区：药名标题、关闭按钮和状态标签固定在顶部，不参与内容滚动；图片和详情字段作为一个整体放入独立滚动区域。详情信息卡片必须随字段自然撑高，不做卡片内部滚动；空备注等空字段不占位展示。
 - 首页分类模块默认折叠，点击分类头后展开；搜索药品时自动展开匹配分类，避免搜索结果被隐藏。
 - 默认分类清单为 11 类：发烧止痛、感冒、咳嗽、胃肠道、高血压、高尿酸、高血脂、皮肤、过敏、眼科、其他。
 - 首页分类横幅采用 AI 生成底图 + 本地叠加中文标题，再统一压缩为 webp，避免生成模型中文乱码并控制首页加载体积。
@@ -110,6 +113,11 @@
 - 2026-06-25: Reworked `MedicineForm` into an AI-recognition-driven structured entry flow without changing business logic. Form sections are now ordered as `AI识别` (photo upload/status), `药品身份` (name/category), `库存资产` (quantity/unit/location), `使用规则` (expiry/timing/cycle/note), with the fixed bottom save action unchanged. `npm run build` passed.
 - 2026-06-25: Simplified the home header system actions into an Apple-style `⋯` more menu. The visible `更换访问码` entry was removed, recycle-bin access moved into the more menu, and business logic/data models were unchanged. `npm run build` passed.
 - 2026-06-25: Fixed repeated AI image recognition in `MedicineForm`. Each new uploaded CloudBase fileID now invalidates any pending recognition, resets AI status, and directly triggers recognition again; AI backfill can update prior AI-filled or auto-prefilled fields but preserves fields the user manually edited. `npm run build` passed.
+- 2026-06-26: Fixed medicine detail sheet scrolling. The detail sheet now keeps the title/close action and status tags fixed at the top while the photo and detail fields scroll in `.detail-scroll`. `npm run build` passed.
+- 2026-06-26: Refined detail sheet spacing and field rendering. The detail popup itself no longer scrolls, `.detail-scroll` owns the whole body scroll, the photo has explicit `space-xl` separation from the info card, and empty note fields are hidden so the final visible row has no misleading divider. `npm run build` passed.
+- 2026-06-26: Upgraded home Tab active indicator to a lightweight physical slider. The active background is now a `.van-tabs__nav::before` pseudo-element that moves with `transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1)`, uses `:has()` for the second-tab state, keeps text animation separate, and disables motion under `prefers-reduced-motion`. `npm run build` passed; browser check at 390px found no horizontal overflow.
+- 2026-06-26: Removed the outer border from the global action bar `药箱体检` secondary button while keeping a subtle transparent inner-light treatment. `npm run build` passed.
+- 2026-06-26: Re-centered the home Tab active slider using `top: 50%` plus `translateY(-50%)` and a 6px inset, keeping the slider vertically centered inside the white pill container. `npm run build` passed; browser metrics confirmed 64px container, 52px slider, and equal 6px top/bottom inset.
 
 ## Pending Confirmations
 - CloudBase 控制台登录授权需要开启「匿名登录」，否则 `auth.signInAnonymously()` 会返回「登录方式未开启」。

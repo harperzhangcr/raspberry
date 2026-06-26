@@ -786,6 +786,20 @@ function submit() {
   line-height: var(--line-normal);
 }
 
+.form-card :deep(input[type='date'].van-field__control) {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.form-card :deep(input[type='date'].van-field__control::-webkit-date-and-time-value) {
+  min-height: 28px;
+  text-align: left;
+}
+
+.form-card :deep(input[type='date'].van-field__control::-webkit-calendar-picker-indicator) {
+  margin-left: var(--space-sm);
+}
+
 .form-card :deep(textarea) {
   min-height: 54px;
   align-items: flex-start;
@@ -834,7 +848,8 @@ function submit() {
   align-items: center;
   justify-content: flex-start;
   color: var(--color-text);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-md);
+  font-weight: 400;
   line-height: var(--line-normal);
   white-space: nowrap;
 }
@@ -852,7 +867,7 @@ function submit() {
   background: var(--color-surface-muted);
   color: var(--color-text);
   font: inherit;
-  font-weight: 600;
+  font-weight: 400;
   line-height: 28px;
 }
 

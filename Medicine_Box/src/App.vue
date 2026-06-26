@@ -177,7 +177,7 @@
       </section>
     </van-popup>
 
-    <van-popup v-model:show="showDetail" position="bottom" round class="sheet-popup">
+    <van-popup v-model:show="showDetail" position="bottom" round class="sheet-popup detail-sheet-popup">
       <section v-if="detailMedicine" class="detail-panel">
         <div class="sheet-title">
           <h2>{{ detailMedicine.name }}</h2>
@@ -192,20 +192,22 @@
             {{ label.text }}
           </van-tag>
         </div>
-        <div v-if="detailImageUrl" class="detail-photo">
-          <img :src="detailImageUrl" :alt="detailMedicine.name" @error="detailImageUrl = ''" />
-        </div>
-        <div class="detail-card">
-          <van-cell title="分类" :value="detailMedicine.category" />
-          <van-cell title="数量" :value="String(detailMedicine.quantity)" />
-          <van-cell title="单位" :value="detailMedicine.unit" />
-          <van-cell v-if="detailMedicine.location" title="存放位置" :value="detailMedicine.location" />
-          <van-cell title="有效期" :value="detailMedicine.expiryDate" />
-          <van-cell title="服用方法" :value="detailMedicine.dosageTiming || '不限'" />
-          <van-cell v-if="detailMedicine.dosageCycle" title="用药周期" :value="detailMedicine.dosageCycle" />
-          <div class="detail-note-row">
-            <span>备注</span>
-            <p>{{ detailMedicine.note || '无' }}</p>
+        <div class="detail-scroll">
+          <div v-if="detailImageUrl" class="detail-photo">
+            <img :src="detailImageUrl" :alt="detailMedicine.name" @error="detailImageUrl = ''" />
+          </div>
+          <div class="detail-card">
+            <van-cell title="分类" :value="detailMedicine.category" />
+            <van-cell title="数量" :value="String(detailMedicine.quantity)" />
+            <van-cell title="单位" :value="detailMedicine.unit" />
+            <van-cell v-if="detailMedicine.location" title="存放位置" :value="detailMedicine.location" />
+            <van-cell title="有效期" :value="detailMedicine.expiryDate" />
+            <van-cell title="服用方法" :value="detailMedicine.dosageTiming || '不限'" />
+            <van-cell v-if="detailMedicine.dosageCycle" title="用药周期" :value="detailMedicine.dosageCycle" />
+            <div v-if="detailMedicine.note" class="detail-note-row">
+              <span>备注</span>
+              <p>{{ detailMedicine.note }}</p>
+            </div>
           </div>
         </div>
       </section>
